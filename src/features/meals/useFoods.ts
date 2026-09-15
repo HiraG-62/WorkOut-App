@@ -14,12 +14,15 @@ export function foodScore(food: Food, slot: number, now: number): number {
 }
 
 export function useFoods(): { foods: Food[]; loaded: boolean } {
-  const all = useLiveQuery(() => db.foods.filter((f) => !f.archived).toArray(), [])
+  // クエリ実行時点の時刻と時間帯で並べ替える（描画中に Date.now を呼ばない）
+  const result = useLiveQuery(async () => {
+    const all = await db.foods.filter((f) => !f.archived).toArray()
+    return { all, now: Date.now(), slot: timeSlot() }
+  }, [])
   const foods = useMemo(() => {
-    if (!all) return []
-    const slot = timeSlot()
-    const now = Date.now()
+    if (!result) return []
+    const { all, now, slot } = result
     return [...all].sort((a, b) => foodScore(b, slot, now) - foodScore(a, slot, now) || a.name.localeCompare(b.name, 'ja'))
-  }, [all])
-  return { foods, loaded: all !== undefined }
+  }, [result])
+  return { foods, loaded: result !== undefined }
 }

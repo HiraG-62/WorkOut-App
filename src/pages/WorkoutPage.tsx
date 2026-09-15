@@ -50,7 +50,7 @@ export function WorkoutPage() {
         <Card accent className="wp__today" onClick={() => navigate(`/workout/${todayWorkout.id}`)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate(`/workout/${todayWorkout.id}`)}>
           <div className="wp__today-head">
             <span className="section-title">{todayWorkout.endedAt ? '今日は完了' : '進行中'}</span>
-            <span className="num wp__today-time">{formatDuration((todayWorkout.endedAt ?? Date.now()) - todayWorkout.startedAt)}</span>
+            {todayWorkout.endedAt && <span className="num wp__today-time">{formatDuration(todayWorkout.endedAt - todayWorkout.startedAt)}</span>}
           </div>
           <p className="wp__today-summary">{summarizeSets(setsOf(todayWorkout.id), exercises, todayWorkout.exerciseIds) || '種目未選択'}</p>
           <div className="wp__today-cta">

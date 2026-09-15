@@ -6,7 +6,6 @@ import { getLatestWeight, updateSettings } from '../db/repo'
 import { calcTargets } from '../lib/nutrition'
 import { createAiClient, AiError } from '../lib/ai'
 import { downloadText, exportBackup, importBackup } from '../lib/backup'
-import { useSettings } from '../hooks/useSettings'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, Section } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -15,50 +14,75 @@ import { Stepper } from '../components/ui/Stepper'
 import { Toggle } from '../components/ui/Toggle'
 import { Sheet } from '../components/ui/Sheet'
 import { useToast } from '../components/ui/Toast'
-import { ACTIVITY_LEVELS, AI_PROVIDERS, GOALS, SEX, type ActivityLevel, type AiProvider, type Goal, type Profile, type Sex, type TargetSuggestion, type Targets } from '../types'
+import {
+  ACTIVITY_LEVELS,
+  AI_PROVIDERS,
+  GOALS,
+  SEX,
+  type ActivityLevel,
+  type AiConfig,
+  type AiProvider,
+  type Goal,
+  type Profile,
+  type Settings,
+  type Sex,
+  type TargetSuggestion,
+  type Targets,
+} from '../types'
 import './SettingsPage.css'
 
 const REST_STEP = 5
 const REST_MIN = 10
 const REST_MAX = 600
 const KCAL_STEP = 50
+const KCAL_MIN = 800
+const KCAL_MAX = 6000
 const G_STEP = 5
+const PROTEIN_MAX = 400
+const FAT_MAX = 300
+const CARBS_MAX = 800
 const SAVE_DEBOUNCE_MS = 400
+const FALLBACK_WEIGHT_KG = 60
 
 export function SettingsPage() {
-  const settings = useSettings()
+  const settings = useLiveQuery(async () => (await db.settings.get('app')) ?? null, [])
+  const [formKey, setFormKey] = useState(0)
+  if (!settings) return <div className="page" />
+  // 復元後は初期値が変わるので key でフォームを作り直す
+  return <SettingsForm key={formKey} initial={settings} onImported={() => setFormKey((k) => k + 1)} />
+}
+
+interface SettingsFormProps {
+  initial: Settings
+  onImported: () => void
+}
+
+function SettingsForm({ initial, onImported }: SettingsFormProps) {
   const toast = useToast()
-  const latestWeight = useLiveQuery(() => getLatestWeight(), [])
-  const [profile, setProfile] = useState<Profile>(settings.profile)
-  const [targets, setTargets] = useState<Targets>(settings.targets)
-  const [ai, setAi] = useState(settings.ai)
+  const latestWeight = useLiveQuery(async () => (await getLatestWeight()) ?? null, [])
+  const [profile, setProfile] = useState<Profile>(initial.profile)
+  const [targets, setTargets] = useState<Targets>(initial.targets)
+  const [ai, setAi] = useState<AiConfig>(initial.ai)
   const [showKey, setShowKey] = useState(false)
   const [aiBusy, setAiBusy] = useState(false)
   const [suggestion, setSuggestion] = useState<TargetSuggestion | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const hydrated = useRef(false)
+  const dirty = useRef(false)
 
-  // DB から読み込めたらローカル状態を同期（初回のみ）
+  // 変更を自動保存（初期値のままなら書かない）
   useEffect(() => {
-    if (hydrated.current) return
-    if (settings.onboarded || settings.targets.kcal !== 2200 || settings.ai.keys.claude || settings.ai.keys.openai || settings.ai.keys.gemini) {
-      hydrated.current = true
+    if (!dirty.current) {
+      dirty.current = true
+      return
     }
-    setProfile(settings.profile)
-    setTargets(settings.targets)
-    setAi(settings.ai)
-  }, [settings])
-
-  // 変更を自動保存
-  useEffect(() => {
     const id = window.setTimeout(() => {
       void updateSettings({ profile, targets, ai, onboarded: true })
     }, SAVE_DEBOUNCE_MS)
     return () => window.clearTimeout(id)
   }, [profile, targets, ai])
 
-  const weightKg = latestWeight?.kg ?? 60
+  const weightKg = latestWeight?.kg ?? FALLBACK_WEIGHT_KG
 
   const autoCalc = () => {
     setTargets(calcTargets(profile, weightKg))
@@ -81,6 +105,18 @@ export function SettingsPage() {
     }
   }
 
+  const applySuggestion = () => {
+    if (!suggestion) return
+    setTargets({
+      kcal: Math.round(suggestion.kcal),
+      protein: Math.round(suggestion.protein),
+      fat: Math.round(suggestion.fat),
+      carbs: Math.round(suggestion.carbs),
+    })
+    setSuggestion(null)
+    toast.show('目標に反映しました', 'success')
+  }
+
   const doExport = async () => {
     downloadText(`workout-backup-${new Date().toISOString().slice(0, 10)}.json`, await exportBackup())
   }
@@ -91,8 +127,8 @@ export function SettingsPage() {
     if (!file) return
     try {
       await importBackup(await file.text())
-      hydrated.current = false
       toast.show('復元しました', 'success')
+      onImported()
     } catch (err) {
       toast.show(err instanceof Error ? err.message : '復元に失敗しました', 'error')
     }
@@ -106,6 +142,7 @@ export function SettingsPage() {
   const provider = ai.provider
   const setKey = (v: string) => setAi((s) => ({ ...s, keys: { ...s.keys, [provider]: v } }))
   const setModel = (v: string) => setAi((s) => ({ ...s, models: { ...s.models, [provider]: v } }))
+  const toNumber = (v: string) => (Number.isFinite(Number(v)) ? Number(v) : 0)
 
   return (
     <div className="page st">
@@ -118,15 +155,17 @@ export function SettingsPage() {
             <Segmented value={profile.sex} onChange={(sex: Sex) => setProfile({ ...profile, sex })} options={(Object.keys(SEX) as Sex[]).map((k) => ({ value: k, label: SEX[k] }))} label="性別" />
           </div>
           <div className="st__two">
-            <TextField label="年齢" type="number" inputMode="numeric" value={profile.age} onChange={(e) => setProfile({ ...profile, age: Number(e.target.value) || 0 })} suffix="歳" />
-            <TextField label="身長" type="number" inputMode="decimal" value={profile.heightCm} onChange={(e) => setProfile({ ...profile, heightCm: Number(e.target.value) || 0 })} suffix="cm" />
+            <TextField label="年齢" type="number" inputMode="numeric" value={profile.age || ''} onChange={(e) => setProfile({ ...profile, age: toNumber(e.target.value) })} suffix="歳" />
+            <TextField label="身長" type="number" inputMode="decimal" value={profile.heightCm || ''} onChange={(e) => setProfile({ ...profile, heightCm: toNumber(e.target.value) })} suffix="cm" />
           </div>
           <SelectField label="活動量" value={profile.activity} onChange={(e) => setProfile({ ...profile, activity: e.target.value as ActivityLevel })} options={(Object.keys(ACTIVITY_LEVELS) as ActivityLevel[]).map((k) => ({ value: k, label: ACTIVITY_LEVELS[k].label }))} />
           <div className="field">
             <span className="field__label">目的</span>
             <Segmented value={profile.goal} onChange={(goal: Goal) => setProfile({ ...profile, goal })} options={(Object.keys(GOALS) as Goal[]).map((k) => ({ value: k, label: GOALS[k].label }))} label="目的" />
           </div>
-          <p className="faint st__note">体重は「記録」タブの値（{weightKg.toFixed(1)}kg）を使います</p>
+          <p className="faint st__note">
+            {latestWeight ? `体重は「記録」タブの値（${weightKg.toFixed(1)}kg）を使います` : `体重が未記録のため ${FALLBACK_WEIGHT_KG}kg で計算します。ホームで体重を入れると精度が上がります`}
+          </p>
         </Card>
       </Section>
 
@@ -141,19 +180,19 @@ export function SettingsPage() {
             </Button>
           </div>
           <div className="st__targets">
-            <Stepper label="カロリー" value={targets.kcal} onChange={(kcal) => setTargets({ ...targets, kcal })} step={KCAL_STEP} min={800} max={6000} unit="kcal" />
-            <Stepper label="タンパク質" value={targets.protein} onChange={(protein) => setTargets({ ...targets, protein })} step={G_STEP} min={0} max={400} unit="g" />
-            <Stepper label="脂質" value={targets.fat} onChange={(fat) => setTargets({ ...targets, fat })} step={G_STEP} min={0} max={300} unit="g" />
-            <Stepper label="炭水化物" value={targets.carbs} onChange={(carbs) => setTargets({ ...targets, carbs })} step={G_STEP} min={0} max={800} unit="g" />
+            <Stepper label="カロリー" value={targets.kcal} onChange={(kcal) => setTargets({ ...targets, kcal })} step={KCAL_STEP} min={KCAL_MIN} max={KCAL_MAX} unit="kcal" />
+            <Stepper label="タンパク質" value={targets.protein} onChange={(protein) => setTargets({ ...targets, protein })} step={G_STEP} min={0} max={PROTEIN_MAX} unit="g" />
+            <Stepper label="脂質" value={targets.fat} onChange={(fat) => setTargets({ ...targets, fat })} step={G_STEP} min={0} max={FAT_MAX} unit="g" />
+            <Stepper label="炭水化物" value={targets.carbs} onChange={(carbs) => setTargets({ ...targets, carbs })} step={G_STEP} min={0} max={CARBS_MAX} unit="g" />
           </div>
         </Card>
       </Section>
 
       <Section title="休憩タイマー">
         <Card className="stack">
-          <Stepper label="セット間の休憩" value={settings.defaultRestSec} onChange={(defaultRestSec) => void updateSettings({ defaultRestSec })} step={REST_STEP} min={REST_MIN} max={REST_MAX} unit="秒" />
-          <Toggle checked={settings.sound} onChange={(sound) => void updateSettings({ sound })} label="終了音" description="残り3秒からカウントダウン音も鳴ります" />
-          <Toggle checked={settings.vibration} onChange={(vibration) => void updateSettings({ vibration })} label="バイブレーション" description="対応端末のみ" />
+          <Stepper label="セット間の休憩" value={initial.defaultRestSec} onChange={(defaultRestSec) => void updateSettings({ defaultRestSec })} step={REST_STEP} min={REST_MIN} max={REST_MAX} unit="秒" />
+          <Toggle checked={initial.sound} onChange={(sound) => void updateSettings({ sound })} label="終了音" description="残り3秒からカウントダウン音も鳴ります" />
+          <Toggle checked={initial.vibration} onChange={(vibration) => void updateSettings({ vibration })} label="バイブレーション" description="対応端末のみ" />
         </Card>
       </Section>
 
@@ -198,15 +237,7 @@ export function SettingsPage() {
             <Button block onClick={() => setSuggestion(null)}>
               やめる
             </Button>
-            <Button
-              block
-              variant="primary"
-              onClick={() => {
-                if (suggestion) setTargets({ kcal: Math.round(suggestion.kcal), protein: Math.round(suggestion.protein), fat: Math.round(suggestion.fat), carbs: Math.round(suggestion.carbs) })
-                setSuggestion(null)
-                toast.show('目標に反映しました', 'success')
-              }}
-            >
+            <Button block variant="primary" onClick={applySuggestion}>
               この値にする
             </Button>
           </div>

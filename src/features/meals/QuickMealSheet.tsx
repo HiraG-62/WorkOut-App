@@ -5,6 +5,7 @@ import { Sheet } from '../../components/ui/Sheet'
 import { Stepper } from '../../components/ui/Stepper'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
+import { useBusy } from '../../hooks/useBusy'
 import './QuickMealSheet.css'
 
 const KCAL_STEP = 50
@@ -26,6 +27,7 @@ interface QuickMealSheetProps {
 /** 食品名なしで「だいたい○kcal・P○g」だけ記録する */
 export function QuickMealSheet({ open, onClose, date }: QuickMealSheetProps) {
   const toast = useToast()
+  const guard = useBusy()
   const [kcal, setKcal] = useState(DEFAULT_KCAL)
   const [protein, setProtein] = useState(DEFAULT_PROTEIN)
   const [fat, setFat] = useState(0)
@@ -43,11 +45,12 @@ export function QuickMealSheet({ open, onClose, date }: QuickMealSheetProps) {
     setName('')
   }, [open])
 
-  const save = async () => {
-    const entry = await logQuickMeal({ name: name.trim() || DEFAULT_NAME, kcal, protein, fat, carbs }, date)
-    toast.show('記録しました', 'success', { label: '取り消す', onClick: () => void deleteMeal(entry.id) }, UNDO_MS)
-    onClose()
-  }
+  const save = () =>
+    guard(async () => {
+      const entry = await logQuickMeal({ name: name.trim() || DEFAULT_NAME, kcal, protein, fat, carbs }, date)
+      toast.show('記録しました', 'success', { label: '取り消す', onClick: () => void deleteMeal(entry.id) }, UNDO_MS)
+      onClose()
+    })
 
   return (
     <Sheet

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowUpRight, Check, CopyCheck, MoreHorizontal, Play, Square, Trash2 } from 'lucide-react'
-import { addSet, deleteSet, getLastSetsForExercise, removeExerciseFromWorkout, setWorkoutExercises, updateSet } from '../../db/repo'
+import { addSet, deleteSet, getLastSetsForExercise, removeExerciseFromWorkout, restoreExerciseToWorkout, setWorkoutExercises, updateSet } from '../../db/repo'
 import { db } from '../../db/db'
 import { tapHaptic, unlockAudio } from '../../lib/feedback'
 import { formatRelative } from '../../lib/date'
@@ -9,6 +9,8 @@ import { useRestTimer } from '../../hooks/useRestTimer'
 import { Stepper } from '../../components/ui/Stepper'
 import { Sheet } from '../../components/ui/Sheet'
 import { Button } from '../../components/ui/Button'
+import { useToast } from '../../components/ui/Toast'
+import { useBusy } from '../../hooks/useBusy'
 import { formatSet } from './useWorkoutStats'
 import type { Exercise, Workout, WorkoutSet } from '../../types'
 import './ExerciseBlock.css'
@@ -23,6 +25,7 @@ const MAX_SECONDS = 3600
 const MAX_WEIGHT = 200
 const TIMING_TICK_MS = 250
 const FLASH_MS = 600
+const UNDO_MS = 6000
 
 interface ExerciseBlockProps {
   workout: Workout
@@ -45,6 +48,8 @@ type PlannedSet = Pick<WorkoutSet, 'reps' | 'seconds' | 'weightKg'>
 
 export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefault, readOnly, active }: ExerciseBlockProps) {
   const timer = useRestTimer()
+  const toast = useToast()
+  const guard = useBusy()
   const lastSets = useLiveQuery(() => getLastSetsForExercise(exercise.id, workout.id), [exercise.id, workout.id])
   const lastWorkout = useLiveQuery(async () => (lastSets && lastSets[0] ? db.workouts.get(lastSets[0].workoutId) : undefined), [lastSets])
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -100,23 +105,38 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
     if (startRest) timer.start(restSec, exercise.name)
   }
 
-  const complete = async (d: Draft) => {
-    unlockAudio()
-    tapHaptic()
-    await record(d, true)
-  }
+  const complete = (d: Draft) =>
+    guard(async () => {
+      unlockAudio()
+      tapHaptic()
+      await record(d, true)
+    })
 
   /** ゴースト行（前回のセット）をタップしてその値で完了 */
-  const completePlanned = async (s: PlannedSet) => {
-    unlockAudio()
-    tapHaptic()
-    await record(s, true)
-  }
+  const completePlanned = (s: PlannedSet) =>
+    guard(async () => {
+      unlockAudio()
+      tapHaptic()
+      await record(s, true)
+    })
 
-  const completeRemaining = async () => {
-    for (const s of planned.slice(done)) await record(s, false)
-    tapHaptic()
-  }
+  const completeRemaining = () =>
+    guard(async () => {
+      for (const s of planned.slice(done)) await record(s, false)
+      tapHaptic()
+    })
+
+  const removeFromWorkout = () =>
+    guard(async () => {
+      setMenuOpen(false)
+      const removed = await removeExerciseFromWorkout(workout.id, exercise.id)
+      toast.show(
+        removed.sets.length > 0 ? `${exercise.name} と ${removed.sets.length} セットを外しました` : `${exercise.name} を外しました`,
+        'info',
+        { label: '取り消す', onClick: () => void restoreExerciseToWorkout(workout.id, exercise.id, removed) },
+        UNDO_MS,
+      )
+    })
 
   const startTiming = () => {
     unlockAudio()
@@ -124,13 +144,14 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
     setTiming(Date.now())
   }
 
-  const stopTiming = async () => {
-    if (timing === null) return
-    const sec = Math.max(1, Math.round((Date.now() - timing) / 1000))
-    setTiming(null)
-    tapHaptic()
-    await record({ seconds: sec, weightKg: draft?.weightKg }, true)
-  }
+  const stopTiming = () =>
+    guard(async () => {
+      if (timing === null) return
+      const sec = Math.max(1, Math.round((Date.now() - timing) / 1000))
+      setTiming(null)
+      tapHaptic()
+      await record({ seconds: sec, weightKg: draft?.weightKg }, true)
+    })
 
   const switchToProgression = async () => {
     if (!progression) return
@@ -254,16 +275,8 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
             </Button>
           )}
           {progression && done > 0 && <p className="faint xb__hint">セットを記録した後は切り替えできません</p>}
-          <Button
-            block
-            variant="danger"
-            icon={<Trash2 size={18} aria-hidden />}
-            onClick={() => {
-              void removeExerciseFromWorkout(workout.id, exercise.id)
-              setMenuOpen(false)
-            }}
-          >
-            この種目を今日のメニューから外す
+          <Button block variant="danger" icon={<Trash2 size={18} aria-hidden />} onClick={() => void removeFromWorkout()}>
+            この種目を今日のメニューから外す{done > 0 ? `（記録した${done}セットも消えます）` : ''}
           </Button>
         </div>
       </Sheet>

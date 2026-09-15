@@ -22,7 +22,9 @@ type Filter = 'all' | 'recent' | BodyPart
 
 export function ExercisePickerSheet({ open, onClose, exercises, selectedIds, recentIds = [], onConfirm, confirmLabel = '追加' }: ExercisePickerSheetProps) {
   const [q, setQ] = useState('')
-  const [filter, setFilter] = useState<Filter>(recentIds.length > 0 ? 'recent' : 'all')
+  // 未選択なら「最近」があればそれ、なければ「すべて」（recentIds は非同期に届くため描画時に決める）
+  const [chosen, setChosen] = useState<Filter | null>(null)
+  const filter: Filter = chosen ?? (recentIds.length > 0 ? 'recent' : 'all')
   const [picked, setPicked] = useState<string[]>([])
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Exercise | null>(null)
@@ -77,7 +79,7 @@ export function ExercisePickerSheet({ open, onClose, exercises, selectedIds, rec
         </div>
         <div className="ep__filters" role="tablist" aria-label="部位で絞り込む">
           {filters.map((f) => (
-            <button key={f.value} type="button" role="tab" aria-selected={filter === f.value} className={`ep__filter ${filter === f.value ? 'ep__filter--on' : ''}`} onClick={() => setFilter(f.value)}>
+            <button key={f.value} type="button" role="tab" aria-selected={filter === f.value} className={`ep__filter ${filter === f.value ? 'ep__filter--on' : ''}`} onClick={() => setChosen(f.value)}>
               {f.label}
             </button>
           ))}

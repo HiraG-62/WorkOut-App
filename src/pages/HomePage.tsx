@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { Camera, ChevronRight, Dumbbell, Play, Repeat, Settings, Sparkles, Zap } from 'lucide-react'
 import { db } from '../db/db'
 import { createWorkout, updateSettings } from '../db/repo'
-import { formatDuration, formatLong, todayKey } from '../lib/date'
+import { formatDuration, formatLong } from '../lib/date'
+import { useToday } from '../hooks/useToday'
 import { isAiConfigured } from '../lib/ai'
 import { useSettings } from '../hooks/useSettings'
 import { Card, Section } from '../components/ui/Card'
@@ -24,7 +25,7 @@ const QUICK_LIMIT = 4
 export function HomePage() {
   const navigate = useNavigate()
   const settings = useSettings()
-  const today = todayKey()
+  const today = useToday()
   const { totals } = useDayMeals(today)
   const { foods } = useFoods()
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(5).toArray(), [])

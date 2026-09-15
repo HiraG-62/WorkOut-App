@@ -47,9 +47,25 @@ const FALLBACK_WEIGHT_KG = 60
 export function SettingsPage() {
   const settings = useLiveQuery(async () => (await db.settings.get('app')) ?? null, [])
   const [formKey, setFormKey] = useState(0)
+  const remountPending = useRef(false)
+
+  // 復元後は liveQuery が新しい設定を出してから key でフォームを作り直す（古い値で初期化しないため）
+  useEffect(() => {
+    if (!remountPending.current || !settings) return
+    remountPending.current = false
+    setFormKey((k) => k + 1)
+  }, [settings])
+
   if (!settings) return <div className="page" />
-  // 復元後は初期値が変わるので key でフォームを作り直す
-  return <SettingsForm key={formKey} initial={settings} onImported={() => setFormKey((k) => k + 1)} />
+  return (
+    <SettingsForm
+      key={formKey}
+      initial={settings}
+      onImported={() => {
+        remountPending.current = true
+      }}
+    />
+  )
 }
 
 interface SettingsFormProps {

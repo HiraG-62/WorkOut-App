@@ -54,10 +54,10 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
   }, [open, onClose])
 
   useEffect(() => {
-    if (!open || !panelRef.current) return
-    // 入力があれば最初の入力へ、なければパネル自体にフォーカス
-    const autoFocusTarget = panelRef.current.querySelector<HTMLElement>('[autofocus]')
-    ;(autoFocusTarget ?? panelRef.current).focus()
+    const panel = panelRef.current
+    if (!open || !panel) return
+    // React の autoFocus で既に入力へフォーカスが移っていればそれを尊重する
+    if (!panel.contains(document.activeElement)) panel.focus()
   }, [open])
 
   // ソフトウェアキーボード表示中はシートの高さを可視領域に合わせ、フッターが隠れないようにする

@@ -16,6 +16,7 @@ import { useToast } from '../components/ui/Toast'
 import { ExerciseBlock } from '../features/workout/ExerciseBlock'
 import { ExercisePickerSheet } from '../features/workout/ExercisePickerSheet'
 import { useRecentExerciseIds } from '../features/workout/useRecentExerciseIds'
+import { useBusy } from '../hooks/useBusy'
 import type { WorkoutSet } from '../types'
 import './WorkoutSessionPage.css'
 
@@ -27,6 +28,7 @@ export function WorkoutSessionPage() {
   const settings = useSettings()
   const timer = useRestTimer()
   const toast = useToast()
+  const guard = useBusy()
   const workout = useLiveQuery(async () => (await db.workouts.get(id)) ?? null, [id])
   const sets = useLiveQuery(() => db.sets.where('workoutId').equals(id).sortBy('order'), [id])
   const exerciseList = useLiveQuery(() => db.exercises.toArray(), [])
@@ -92,20 +94,21 @@ export function WorkoutSessionPage() {
     navigate('/workout', { replace: true })
   }
 
-  const completeAllRemaining = async () => {
-    for (const { exId, s } of remainingAll) {
-      const ex = exercises.get(exId)
-      await addSet({
-        workoutId: workout.id,
-        exerciseId: exId,
-        reps: ex?.type === 'time' ? undefined : s.reps,
-        seconds: ex?.type === 'time' ? s.seconds : undefined,
-        weightKg: ex?.useWeight ? s.weightKg : undefined,
-      })
-    }
-    tapHaptic()
-    toast.show(`${remainingAll.length}セットを前回と同じで記録しました`, 'success')
-  }
+  const completeAllRemaining = () =>
+    guard(async () => {
+      for (const { exId, s } of remainingAll) {
+        const ex = exercises.get(exId)
+        await addSet({
+          workoutId: workout.id,
+          exerciseId: exId,
+          reps: ex?.type === 'time' ? undefined : s.reps,
+          seconds: ex?.type === 'time' ? s.seconds : undefined,
+          weightKg: ex?.useWeight ? s.weightKg : undefined,
+        })
+      }
+      tapHaptic()
+      toast.show(`${remainingAll.length}セットを前回と同じで記録しました`, 'success')
+    })
 
   const addExercises = async (ids: string[]) => {
     await setWorkoutExercises(workout.id, [...exerciseIds, ...ids.filter((x) => !exerciseIds.includes(x))])

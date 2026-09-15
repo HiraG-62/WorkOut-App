@@ -6,6 +6,7 @@ import { addMealSet, deleteMealSet, logMealSet } from '../../db/repo'
 import { Sheet } from '../../components/ui/Sheet'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
+import { useBusy } from '../../hooks/useBusy'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { TextField } from '../../components/ui/Field'
 import type { MealEntry } from '../../types'
@@ -21,6 +22,7 @@ interface MealSetsSheetProps {
 
 export function MealSetsSheet({ open, onClose, date, todayEntries }: MealSetsSheetProps) {
   const toast = useToast()
+  const guard = useBusy()
   const sets = useLiveQuery(async () => (await db.mealSets.toArray()).sort((a, b) => a.createdAt - b.createdAt), [])
   const foods = useLiveQuery(() => db.foods.toArray(), [])
   const [creating, setCreating] = useState(false)
@@ -40,13 +42,14 @@ export function MealSetsSheet({ open, onClose, date, todayEntries }: MealSetsShe
     toast.show('セットを作成しました', 'success')
   }
 
-  const apply = async (id: string) => {
-    const set = sets?.find((s) => s.id === id)
-    if (!set) return
-    const n = await logMealSet(set, date)
-    toast.show(`${set.name} の${n}品を記録しました`, 'success')
-    onClose()
-  }
+  const apply = (id: string) =>
+    guard(async () => {
+      const set = sets?.find((s) => s.id === id)
+      if (!set) return
+      const n = await logMealSet(set, date)
+      toast.show(`${set.name} の${n}品を記録しました`, 'success')
+      onClose()
+    })
 
   return (
     <Sheet open={open} onClose={onClose} title="食事セット">

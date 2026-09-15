@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Camera, ChevronLeft, ChevronRight, CopyPlus, Layers, Search, UtensilsCrossed, Zap } from 'lucide-react'
 import { copyMeals } from '../db/repo'
-import { addDays, formatRelative, todayKey } from '../lib/date'
+import { addDays, formatRelative } from '../lib/date'
+import { useToday } from '../hooks/useToday'
 import { isAiConfigured } from '../lib/ai'
 import { useSettings } from '../hooks/useSettings'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -28,11 +29,20 @@ type SheetKind = 'picker' | 'form' | 'quick' | 'photo' | 'sets' | null
 export function MealsPage() {
   const settings = useSettings()
   const toast = useToast()
-  const [date, setDate] = useState(todayKey())
+  const today = useToday()
+  const [date, setDate] = useState(today)
+  // 「今日」を見ている最中に日付が変わったら追従する（過去日を見ている時はそのまま）
+  const prevToday = useRef(today)
+  useEffect(() => {
+    if (prevToday.current !== today) {
+      setDate((d) => (d === prevToday.current ? today : d))
+      prevToday.current = today
+    }
+  }, [today])
   const { entries, totals } = useDayMeals(date)
   const { foods } = useFoods()
   const [sheet, setSheet] = useState<SheetKind>(null)
-  const isToday = date === todayKey()
+  const isToday = date === today
   const aiReady = isAiConfigured(settings.ai)
 
   const copyYesterday = async () => {
@@ -49,7 +59,7 @@ export function MealsPage() {
             <button type="button" onClick={() => setDate(addDays(date, -1))} aria-label="前の日">
               <ChevronLeft size={20} aria-hidden />
             </button>
-            <button type="button" className="mp__date" onClick={() => setDate(todayKey())} aria-label="今日に戻る">
+            <button type="button" className="mp__date" onClick={() => setDate(today)} aria-label="今日に戻る">
               {formatRelative(date)}
             </button>
             <button type="button" onClick={() => setDate(addDays(date, 1))} aria-label="次の日" disabled={isToday}>

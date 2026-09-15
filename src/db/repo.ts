@@ -1,6 +1,6 @@
 import { db, DEFAULT_SETTINGS } from './db'
 import { newId } from '../lib/id'
-import { timeSlot, todayKey } from '../lib/date'
+import { fromDateKey, timeSlot, todayKey } from '../lib/date'
 import type {
   Exercise,
   Food,
@@ -89,12 +89,33 @@ export async function setWorkoutExercises(id: string, exerciseIds: string[]): Pr
   await db.workouts.update(id, { exerciseIds })
 }
 
-export async function removeExerciseFromWorkout(workoutId: string, exerciseId: string): Promise<void> {
+export interface RemovedExercise {
+  index: number
+  sets: WorkoutSet[]
+}
+
+/** 種目をメニューから外す。取り消し用に位置と削除したセットを返す */
+export async function removeExerciseFromWorkout(workoutId: string, exerciseId: string): Promise<RemovedExercise> {
+  return db.transaction('rw', db.workouts, db.sets, async () => {
+    const w = await db.workouts.get(workoutId)
+    if (!w) return { index: 0, sets: [] }
+    const index = w.exerciseIds.indexOf(exerciseId)
+    const sets = await db.sets.where('[workoutId+exerciseId]').equals([workoutId, exerciseId]).toArray()
+    await db.workouts.update(workoutId, { exerciseIds: w.exerciseIds.filter((e) => e !== exerciseId) })
+    await db.sets.bulkDelete(sets.map((s) => s.id))
+    return { index: Math.max(0, index), sets }
+  })
+}
+
+/** removeExerciseFromWorkout の取り消し */
+export async function restoreExerciseToWorkout(workoutId: string, exerciseId: string, removed: RemovedExercise): Promise<void> {
   await db.transaction('rw', db.workouts, db.sets, async () => {
     const w = await db.workouts.get(workoutId)
-    if (!w) return
-    await db.workouts.update(workoutId, { exerciseIds: w.exerciseIds.filter((e) => e !== exerciseId) })
-    await db.sets.where('[workoutId+exerciseId]').equals([workoutId, exerciseId]).delete()
+    if (!w || w.exerciseIds.includes(exerciseId)) return
+    const ids = [...w.exerciseIds]
+    ids.splice(Math.min(removed.index, ids.length), 0, exerciseId)
+    await db.workouts.update(workoutId, { exerciseIds: ids })
+    await db.sets.bulkAdd(removed.sets)
   })
 }
 
@@ -115,18 +136,18 @@ export async function getLastSetsForExercise(
 export async function addSet(
   input: Pick<WorkoutSet, 'workoutId' | 'exerciseId' | 'reps' | 'seconds' | 'weightKg'>,
 ): Promise<WorkoutSet> {
-  const existing = await db.sets
-    .where('[workoutId+exerciseId]')
-    .equals([input.workoutId, input.exerciseId])
-    .count()
-  const set: WorkoutSet = {
-    id: newId(),
-    ...input,
-    order: existing,
-    completedAt: Date.now(),
-  }
-  await db.sets.add(set)
-  return set
+  // order の採番と追加を同一トランザクションにし、連打でも重複しないようにする
+  return db.transaction('rw', db.sets, async () => {
+    const existing = await db.sets.where('[workoutId+exerciseId]').equals([input.workoutId, input.exerciseId]).count()
+    const set: WorkoutSet = {
+      id: newId(),
+      ...input,
+      order: existing,
+      completedAt: Date.now(),
+    }
+    await db.sets.add(set)
+    return set
+  })
 }
 
 export async function updateSet(id: string, patch: Partial<WorkoutSet>): Promise<void> {
@@ -232,12 +253,14 @@ export async function deleteMeal(id: string): Promise<void> {
 export async function copyMeals(fromDate: string, toDate = todayKey()): Promise<number> {
   const src = await db.meals.where('date').equals(fromDate).sortBy('createdAt')
   if (src.length === 0) return 0
-  const now = Date.now()
-  const copies: MealEntry[] = src.map((m, i) => ({
+  // 元の時刻（朝・昼・夜）を保ったままコピー先の日付に載せ替える
+  const fromStart = fromDateKey(fromDate).getTime()
+  const toStart = fromDateKey(toDate).getTime()
+  const copies: MealEntry[] = src.map((m) => ({
     ...m,
     id: newId(),
     date: toDate,
-    createdAt: now + i,
+    createdAt: toStart + (m.createdAt - fromStart),
   }))
   await db.meals.bulkAdd(copies)
   return copies.length

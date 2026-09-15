@@ -5,6 +5,7 @@ import { encodeImageForAi, type EncodedImage } from '../../lib/image'
 import { createAiClient, AiError } from '../../lib/ai'
 import { fmt1 } from '../../lib/nutrition'
 import { useSettings } from '../../hooks/useSettings'
+import { useBusy } from '../../hooks/useBusy'
 import { Sheet } from '../../components/ui/Sheet'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
@@ -29,6 +30,7 @@ interface ResultItem extends FoodEstimateItem {
 export function PhotoEstimateSheet({ open, onClose, date }: PhotoEstimateSheetProps) {
   const settings = useSettings()
   const toast = useToast()
+  const guard = useBusy()
   const fileRef = useRef<HTMLInputElement>(null)
   const [phase, setPhase] = useState<Phase>('pick')
   const [image, setImage] = useState<EncodedImage | null>(null)
@@ -92,20 +94,21 @@ export function PhotoEstimateSheet({ open, onClose, date }: PhotoEstimateSheetPr
   const toggle = (i: number, key: 'include' | 'saveAsFood') =>
     setItems((list) => list.map((it, idx) => (idx === i ? { ...it, [key]: !it[key] } : it)))
 
-  const commit = async () => {
-    const selected = items.filter((it) => it.include)
-    if (selected.length === 0) return
-    for (const it of selected) {
+  const commit = () =>
+    guard(async () => {
+      const selected = items.filter((it) => it.include)
+      if (selected.length === 0) return
+      for (const it of selected) {
       if (it.saveAsFood) {
         const food = await addFood({ name: it.name, unitLabel: it.amount || '1食', kcal: Math.round(it.kcal), protein: it.protein, fat: it.fat, carbs: it.carbs, source: 'ai' })
         await logFood(food, 1, date)
       } else {
-        await logQuickMeal({ name: it.name, kcal: Math.round(it.kcal), protein: it.protein, fat: it.fat, carbs: it.carbs }, date)
+          await logQuickMeal({ name: it.name, kcal: Math.round(it.kcal), protein: it.protein, fat: it.fat, carbs: it.carbs }, date)
+        }
       }
-    }
-    toast.show(`${selected.length}品を記録しました`, 'success')
-    onClose()
-  }
+      toast.show(`${selected.length}品を記録しました`, 'success')
+      onClose()
+    })
 
   const total = items.filter((it) => it.include).reduce((s, it) => s + it.kcal, 0)
   const providerLabel = AI_PROVIDERS[settings.ai.provider].label

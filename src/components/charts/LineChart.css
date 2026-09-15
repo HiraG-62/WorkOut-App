@@ -1,0 +1,49 @@
+.chart {
+  width: 100%;
+}
+
+.chart svg {
+  overflow: visible;
+}
+
+.chart--empty {
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+  font-size: 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+}
+
+.chart__grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart__ytick,
+.chart__xtick {
+  fill: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.chart__line {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart__line--secondary {
+  stroke: var(--text-3);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.chart__last {
+  fill: var(--text);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+}

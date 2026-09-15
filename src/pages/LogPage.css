@@ -1,0 +1,48 @@
+.lg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+}
+
+.lg .segmented {
+  min-width: 120px;
+}
+
+.lg .segmented__item {
+  min-height: 30px;
+  font-size: 12px;
+}
+
+.lg__delta {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-bottom: var(--s-2);
+}
+
+.lg__delta .num {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.lg__delta--down {
+  color: var(--protein) !important;
+}
+
+.lg__delta--up {
+  color: var(--fat) !important;
+}
+
+.lg__controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.lg__empty {
+  font-size: 14px;
+}
+
+.lg__foot {
+  text-align: center;
+  font-size: 12px;
+}

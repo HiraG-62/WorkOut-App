@@ -1,0 +1,68 @@
+.fp__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--s-3);
+  color: var(--text-3);
+}
+
+.fp__search svg {
+  position: absolute;
+  left: var(--s-3);
+  pointer-events: none;
+}
+
+.fp__search input {
+  padding-left: 40px;
+}
+
+.fp__list {
+  list-style: none;
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fp__item {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+}
+
+.fp__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--s-3) 0;
+  min-height: 56px;
+  text-align: left;
+}
+
+.fp__main:active {
+  color: var(--accent);
+}
+
+.fp__name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.fp__meta {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.fp__edit {
+  width: var(--tap);
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+}
+
+.fp__edit:active {
+  color: var(--text);
+}

@@ -1,0 +1,42 @@
+# WorkOut
+
+自宅での自重トレーニングと食事（PFC）を、できるだけ少ないタップで記録するための個人用 PWA。
+
+## 設計方針
+
+- **記録の摩擦を極限まで減らす**: 前回の記録がプリセット済みで ✓ を押すだけ、保存ボタンなし（自動保存）、ワンタップ食事記録
+- **自宅・自重が前提**: 回数 or 秒数だけ記録。加重は種目ごとに任意でオン
+- **端末内で完結**: データは IndexedDB（Dexie）に保存。サーバー・ログイン不要。JSON でバックアップ
+- **AI はおまけ**: 写真からの PFC 推定と目標値の相談に Claude / ChatGPT / Gemini を切り替えて使える。API キー未設定なら非表示
+
+## 機能
+
+| 画面 | 内容 |
+| --- | --- |
+| ホーム | 体重の ± 入力、今日のワークアウト、食事の残りカロリー/PFC、よく食べるもの |
+| トレ | 「前回と同じで開始」/ 種目を選んで開始、セッション画面（✓ で完了 → 休憩タイマー自動開始）、履歴 |
+| 食事 | リング/バーの目標比較、ワンタップ記録、ざっくり記録、写真 AI 推定、食事セット、前日コピー |
+| 記録 | 体重推移（7日平均）、継続カレンダー、種目ごとの最大/合計回数の推移 |
+| 設定 | プロフィールから目標を自動計算（Mifflin-St Jeor）/ AI に相談、休憩タイマー、AI プロバイダ、バックアップ |
+
+## 開発
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm run build      # dist/ に PWA 込みで出力
+npm run lint
+npm run e2e        # 開発サーバー(5199)に対してスマホ相当の自動操作とスクリーンショット
+```
+
+`npm run e2e` は `puppeteer-core` でローカルの Chrome を使います。パスが違う場合は `CHROME_PATH` で指定してください。
+
+## 技術
+
+React 19 / Vite 8 / TypeScript / Dexie / react-router (HashRouter) / vite-plugin-pwa / lucide-react / zod
+
+AI 連携はブラウザから各社 API を直接呼びます（Claude は `@anthropic-ai/sdk` の `dangerouslyAllowBrowser`、OpenAI と Gemini は `fetch`）。キーは端末の IndexedDB にのみ保存し、バックアップにも含めません。
+
+## デプロイ
+
+`vite.config.ts` の `base` は `./` なので、`dist/` を任意の静的ホスティング（GitHub Pages 等）のサブパスに置けます。PWA のカメラ利用には HTTPS が必要です。

@@ -1,0 +1,156 @@
+.wp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+}
+
+.wp__today {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.wp__today:active {
+  transform: scale(0.99);
+}
+
+.wp__today-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wp__today-time {
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.wp__today-summary {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.wp__today-cta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 14px;
+  margin-top: var(--s-1);
+}
+
+.wp__start {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-align: left;
+  transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast);
+}
+
+.wp__start:active {
+  transform: scale(0.98);
+}
+
+.wp__start--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 8px 24px var(--accent-glow);
+}
+
+.wp__start-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.wp__start--primary .wp__start-icon {
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.wp__start-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wp__start-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.wp__start-sub {
+  font-size: 12px;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wp__history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.wp__hist {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  text-align: left;
+  min-height: 60px;
+}
+
+.wp__hist:active {
+  background: var(--surface-2);
+}
+
+.wp__hist-date {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  width: 62px;
+  flex-shrink: 0;
+}
+
+.wp__hist-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wp__hist-summary {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wp__hist-meta {
+  font-size: 12px;
+  color: var(--text-3);
+}

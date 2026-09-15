@@ -1,0 +1,33 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--s-8) var(--s-4);
+  gap: var(--s-2);
+}
+
+.empty__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+  margin-bottom: var(--s-2);
+}
+
+.empty__title {
+  font-weight: 600;
+}
+
+.empty__desc {
+  font-size: 14px;
+  color: var(--text-2);
+  max-width: 280px;
+}
+
+.empty__action {
+  margin-top: var(--s-3);
+}

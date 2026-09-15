@@ -1,0 +1,42 @@
+.ws {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.ws .page-header {
+  margin-bottom: 0;
+}
+
+.ws .page-header__title {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.ws__meta {
+  display: flex;
+  gap: var(--s-4);
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.ws__meta .num {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.ws__blocks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.ws__danger {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--s-4);
+}
+
+.ws__danger .btn {
+  color: var(--text-3);
+}

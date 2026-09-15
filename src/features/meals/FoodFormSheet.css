@@ -1,0 +1,14 @@
+.ff__pfc {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.ff__pfc .field__control input {
+  padding-right: 28px;
+  padding-left: var(--s-2);
+}
+
+.ff__pfc .field__suffix {
+  right: var(--s-2);
+}

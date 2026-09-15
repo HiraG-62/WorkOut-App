@@ -1,0 +1,146 @@
+.hp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+.hp__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.hp__date {
+  font-size: 13px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.hp__title {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hp__settings {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-full);
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.hp__settings:active {
+  background: var(--surface-2);
+}
+
+.hp__welcome {
+  display: flex;
+  gap: var(--s-3);
+}
+
+.hp__welcome-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.hp__welcome-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.hp__welcome-desc {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.hp__welcome-actions {
+  margin-top: var(--s-3);
+}
+
+.hp__workout {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-align: left;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.hp__workout:active {
+  transform: scale(0.98);
+}
+
+.hp__workout--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 8px 24px var(--accent-glow);
+}
+
+.hp__workout--active {
+  border-color: rgba(200, 245, 66, 0.35);
+}
+
+.hp__workout-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.hp__workout--primary .hp__workout-icon {
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.hp__workout--active .hp__workout-icon {
+  color: var(--accent);
+}
+
+.hp__workout-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hp__workout-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.hp__workout-sub {
+  font-size: 12px;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  min-height: 28px;
+}
+
+.hp__meal-actions:empty {
+  display: none;
+}

@@ -9,9 +9,13 @@
   transition: border-color var(--dur), box-shadow var(--dur);
 }
 
+.xb--active {
+  border-color: var(--border-strong);
+}
+
 .xb--flash {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-dim);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .xb__head {
@@ -33,7 +37,7 @@
 }
 
 .xb__sub {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-2);
   margin-top: 4px;
   overflow: hidden;
@@ -42,13 +46,13 @@
 }
 
 .xb__menu {
-  width: 36px;
-  height: 36px;
-  margin: -6px -8px 0 0;
+  width: var(--tap);
+  height: var(--tap);
+  margin: -10px -12px 0 0;
   border-radius: var(--r-full);
   display: grid;
   place-items: center;
-  color: var(--text-3);
+  color: var(--text-2);
 }
 
 .xb__menu:active {
@@ -77,10 +81,12 @@
   padding: 0 var(--s-3);
   border-radius: var(--r-sm);
   text-align: left;
+  transition: background-color var(--dur-fast), border-color var(--dur-fast);
 }
 
 .xb__set--done {
   background: var(--surface-2);
+  border: 1px solid var(--border);
   color: var(--text);
 }
 
@@ -93,8 +99,14 @@
 }
 
 .xb__set--ghost {
-  color: var(--text-3);
-  border: 1px dashed var(--border);
+  color: var(--text-2);
+  border: 1px dashed var(--border-strong);
+}
+
+.xb__set--ghost:active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 .xb__set-no {
@@ -125,13 +137,29 @@
   color: var(--accent);
 }
 
+.xb__set-hint {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
 .xb__input {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--s-3);
   padding-top: var(--s-2);
-  flex-wrap: wrap;
+}
+
+.xb__steppers {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.xb__input--weight {
+  justify-content: space-between;
 }
 
 .xb__done {
@@ -142,56 +170,64 @@
   color: var(--on-accent);
   display: grid;
   place-items: center;
-  box-shadow: 0 6px 20px var(--accent-glow);
-  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast);
+  box-shadow: 0 4px 14px rgba(200, 245, 66, 0.22);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast),
+    background-color var(--dur),
+    color var(--dur);
   flex-shrink: 0;
 }
 
 .xb__done:active {
   transform: scale(0.92);
-  box-shadow: 0 2px 8px var(--accent-glow);
+  box-shadow: 0 2px 6px rgba(200, 245, 66, 0.2);
 }
 
-.xb__play {
-  width: 68px;
-  height: 68px;
-  border-radius: var(--r-full);
+/* 取り組み中でない種目は控えめに */
+.xb__done--idle {
   background: var(--accent-dim);
   color: var(--accent);
   border: 2px solid var(--accent);
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-
-.xb__play:active {
-  transform: scale(0.92);
+  box-shadow: none;
 }
 
 .xb__timing {
   width: 100%;
-  min-height: 84px;
+  min-height: 92px;
   border-radius: var(--r-md);
   background: var(--accent);
   color: var(--on-accent);
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  gap: var(--s-2);
-  padding: 0 var(--s-4);
+  gap: 2px;
+  padding: var(--s-2) var(--s-4);
   animation: pulse 1.2s ease-in-out infinite;
 }
 
-.xb__timing svg {
-  align-self: center;
+.xb__timing-main {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-1);
 }
 
 .xb__timing-val {
-  font-size: 44px;
+  font-size: 48px;
 }
 
 .xb__timing-unit {
   font-weight: 700;
+}
+
+.xb__timing-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.8;
 }
 
 @keyframes pulse {
@@ -209,11 +245,12 @@
   align-items: center;
   justify-content: center;
   gap: var(--s-2);
-  min-height: 40px;
+  min-height: var(--tap);
   border-radius: var(--r-sm);
   color: var(--text-2);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
+  padding: 0 var(--s-3);
 }
 
 .xb__bulk:active {
@@ -224,7 +261,21 @@
 .xb__bulk--play {
   color: var(--accent);
   background: var(--accent-dim);
-  min-height: 44px;
+}
+
+/* このアプリで最も摩擦を減らすボタン。目立たせる */
+.xb__bulk--copy {
+  min-height: 48px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px dashed var(--accent);
+  border-radius: var(--r-md);
+  font-size: 15px;
+}
+
+.xb__bulk--copy:active {
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .xb__hint {

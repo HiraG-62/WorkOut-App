@@ -9,8 +9,12 @@
 }
 
 .lg .segmented__item {
-  min-height: 30px;
-  font-size: 12px;
+  min-height: 36px;
+  font-size: 13px;
+}
+
+.lg .section__head {
+  min-height: 44px;
 }
 
 .lg__delta {

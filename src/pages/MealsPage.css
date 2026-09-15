@@ -18,8 +18,8 @@
 }
 
 .mp__datenav > button {
-  min-width: 40px;
-  min-height: 40px;
+  min-width: var(--tap);
+  min-height: var(--tap);
   display: grid;
   place-items: center;
   color: var(--text-2);
@@ -37,21 +37,15 @@
   padding: 0 var(--s-1);
 }
 
+/* 主要アクションは横スクロールで隠さず 2 列で全部見せる */
 .mp__actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--s-2);
-  overflow-x: auto;
-  margin: 0 calc(-1 * var(--gutter));
-  padding: 2px var(--gutter);
-  scrollbar-width: none;
 }
 
-.mp__actions::-webkit-scrollbar {
-  display: none;
-}
-
-.mp__actions .btn {
-  flex-shrink: 0;
+.mp__actions--five > .btn:first-child {
+  grid-column: 1 / -1;
 }
 
 .mp__nofood {

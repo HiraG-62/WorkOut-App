@@ -1,14 +1,17 @@
 .toast-stack {
   position: fixed;
   left: 50%;
-  top: calc(var(--safe-top) + var(--s-3));
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + var(--s-3));
   transform: translateX(-50%);
   z-index: var(--z-toast);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
   width: min(calc(100% - var(--gutter) * 2), 480px);
   pointer-events: none;
+  transition: bottom var(--dur) var(--ease-out);
+}
+
+/* 休憩タイマーが出ている間はその上に表示する */
+.shell--timer ~ .toast-stack {
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + var(--s-3) + 92px);
 }
 
 .toast {
@@ -16,7 +19,8 @@
   display: flex;
   align-items: center;
   gap: var(--s-3);
-  padding: var(--s-3) var(--s-4);
+  padding: var(--s-2) var(--s-4);
+  min-height: 52px;
   background: var(--surface-3);
   border: 1px solid var(--border-strong);
   border-radius: var(--r-md);
@@ -44,15 +48,21 @@
 
 .toast__action {
   color: var(--accent);
-  font-weight: 600;
-  min-height: 32px;
-  padding: 0 var(--s-2);
+  font-weight: 700;
+  min-height: var(--tap);
+  padding: 0 var(--s-3);
+  margin: -6px -8px -6px 0;
+  border-radius: var(--r-sm);
+}
+
+.toast__action:active {
+  background: var(--accent-dim);
 }
 
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;

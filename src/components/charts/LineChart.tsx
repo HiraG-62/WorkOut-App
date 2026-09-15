@@ -47,13 +47,17 @@ export function LineChart({
     if (all.length === 0) return null
     let min = zeroBased ? 0 : Math.min(...all)
     let max = Math.max(...all)
-    if (min === max) {
+    if (integerTicks) {
+      min = Math.floor(min)
+      max = Math.ceil(max)
+      if (max - min < GRID_LINES) max = min + GRID_LINES
+    } else if (min === max) {
       min -= 1
       max += 1
     }
     const span = max - min
     min -= zeroBased ? 0 : span * 0.15
-    max += span * 0.15
+    max += integerTicks ? 0 : span * 0.15
     const innerW = W - PAD_L - PAD_R
     const innerH = height - PAD_T - PAD_B
     const n = points.length
@@ -72,14 +76,19 @@ export function LineChart({
       })
       return d
     }
-    const grid = Array.from({ length: GRID_LINES }, (_, i) => {
-      const v = min + ((max - min) * (i + 0.5)) / GRID_LINES
-      return { y: yAt(v), v }
-    })
+    const grid = integerTicks
+      ? Array.from({ length: GRID_LINES + 1 }, (_, i) => {
+          const v = Math.round(min + ((max - min) * i) / GRID_LINES)
+          return { y: yAt(v), v }
+        })
+      : Array.from({ length: GRID_LINES }, (_, i) => {
+          const v = min + ((max - min) * (i + 0.5)) / GRID_LINES
+          return { y: yAt(v), v }
+        })
     const last = [...points].reverse().find((p) => p.y !== null)
     const lastIdx = last ? points.lastIndexOf(last) : -1
     return { xAt, yAt, path, grid, innerH, last, lastIdx, min, max }
-  }, [points, secondary, height, zeroBased])
+  }, [points, secondary, height, zeroBased, integerTicks])
 
   if (!model) {
     return (

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronRight, Dumbbell, ListPlus, Play, Repeat } from 'lucide-react'
 import { db } from '../db/db'
 import { createWorkout } from '../db/repo'
@@ -22,7 +22,12 @@ export function WorkoutPage() {
   const exerciseList = useLiveQuery(() => db.exercises.toArray(), [])
   const allSets = useLiveQuery(() => db.sets.toArray(), [])
   const recentIds = useRecentExerciseIds()
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [pickerOpen, setPickerOpen] = useState(searchParams.get('pick') === '1')
+  const closePicker = () => {
+    setPickerOpen(false)
+    if (searchParams.has('pick')) setSearchParams({}, { replace: true })
+  }
 
   const exercises = useMemo(() => new Map((exerciseList ?? []).map((e) => [e.id, e])), [exerciseList])
   const todayWorkout = workouts?.find((w) => w.date === today)
@@ -40,7 +45,15 @@ export function WorkoutPage() {
     navigate(`/workout/${w.id}`)
   }
 
-  if (!workouts || !exerciseList || !allSets) return <div className="page" />
+  if (!workouts || !exerciseList || !allSets) {
+    return (
+      <div className="page wp" aria-busy="true">
+        <div className="skeleton skeleton--header" />
+        <div className="skeleton skeleton--row" />
+        <div className="skeleton skeleton--card" />
+      </div>
+    )
+  }
 
   return (
     <div className="page wp">
@@ -113,7 +126,7 @@ export function WorkoutPage() {
         )}
       </Section>
 
-      <ExercisePickerSheet open={pickerOpen} onClose={() => setPickerOpen(false)} exercises={exerciseList} selectedIds={[]} recentIds={recentIds} onConfirm={(ids) => void startWith(ids)} confirmLabel="選んで開始" />
+      <ExercisePickerSheet open={pickerOpen} onClose={closePicker} exercises={exerciseList} selectedIds={[]} recentIds={recentIds} onConfirm={(ids) => void startWith(ids)} confirmLabel="選んで開始" />
     </div>
   )
 }

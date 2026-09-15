@@ -20,7 +20,7 @@ export function NutritionSummary({ totals, targets, compact = false }: Nutrition
         stroke={compact ? 9 : 11}
         color="var(--kcal)"
         label={String(Math.round(totals.kcal))}
-        sub={remain >= 0 ? `残り ${Math.round(remain)}` : `${Math.round(-remain)} 超過`}
+        sub={remain >= 0 ? `残り ${Math.round(remain)}${compact ? '' : ' kcal'}` : `${Math.round(-remain)}${compact ? '' : ' kcal'} 超過`}
       />
       <div className="nutri__bars">
         <MacroBar short="P" label="タンパク質" value={totals.protein} target={targets.protein} color="var(--protein)" />

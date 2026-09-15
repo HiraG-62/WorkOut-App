@@ -33,6 +33,10 @@
   margin: 0 auto;
 }
 
+.sheet:focus-visible {
+  outline: none;
+}
+
 .sheet--tall {
   height: 88dvh;
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate } from 'react-router-dom'
-import { Camera, ChevronRight, Dumbbell, Play, Repeat, Settings, Sparkles } from 'lucide-react'
+import { Camera, ChevronRight, Dumbbell, Play, Repeat, Settings, Sparkles, Zap } from 'lucide-react'
 import { db } from '../db/db'
 import { createWorkout, updateSettings } from '../db/repo'
 import { formatDuration, formatLong, todayKey } from '../lib/date'
@@ -15,6 +15,7 @@ import { useDayMeals } from '../features/meals/useDayMeals'
 import { useFoods } from '../features/meals/useFoods'
 import { QuickFoods } from '../features/meals/QuickFoods'
 import { PhotoEstimateSheet } from '../features/meals/PhotoEstimateSheet'
+import { QuickMealSheet } from '../features/meals/QuickMealSheet'
 import { summarizeSets } from '../features/workout/useWorkoutStats'
 import './HomePage.css'
 
@@ -32,6 +33,7 @@ export function HomePage() {
   const lastWorkout = workouts?.find((w) => w.date !== today)
   const todaySets = useLiveQuery(async () => (todayWorkout ? db.sets.where('workoutId').equals(todayWorkout.id).toArray() : []), [todayWorkout?.id])
   const [photoOpen, setPhotoOpen] = useState(false)
+  const [quickOpen, setQuickOpen] = useState(false)
   const exercises = useMemo(() => new Map((exerciseList ?? []).map((e) => [e.id, e])), [exerciseList])
   const aiReady = isAiConfigured(settings.ai)
 
@@ -60,7 +62,7 @@ export function HomePage() {
             <p className="hp__welcome-title">ようこそ</p>
             <p className="hp__welcome-desc">設定で体重・身長・目的を入れると、カロリーと PFC の目標を自動で計算します。あとで設定しても大丈夫です。</p>
             <div className="row hp__welcome-actions">
-              <Button size="sm" variant="primary" onClick={() => navigate('/settings')}>
+              <Button size="sm" variant="accent-soft" onClick={() => navigate('/settings')}>
                 目標を設定
               </Button>
               <Button size="sm" variant="ghost" onClick={() => void updateSettings({ onboarded: true })}>
@@ -74,7 +76,9 @@ export function HomePage() {
       <WeightQuick compact />
 
       <Section title="トレーニング">
-        {todayWorkout ? (
+        {workouts === undefined ? (
+          <div className="skeleton skeleton--row" aria-busy="true" />
+        ) : todayWorkout ? (
           <button type="button" className="hp__workout hp__workout--active" onClick={() => navigate(`/workout/${todayWorkout.id}`)}>
             <span className="hp__workout-icon">
               <Dumbbell size={22} aria-hidden />
@@ -100,7 +104,7 @@ export function HomePage() {
             <Play size={20} fill="currentColor" aria-hidden />
           </button>
         ) : (
-          <button type="button" className="hp__workout hp__workout--primary" onClick={() => navigate('/workout')}>
+          <button type="button" className="hp__workout hp__workout--primary" onClick={() => navigate('/workout?pick=1')}>
             <span className="hp__workout-icon">
               <Dumbbell size={22} aria-hidden />
             </span>
@@ -130,11 +134,15 @@ export function HomePage() {
               写真で記録
             </Button>
           )}
+          <Button variant={aiReady ? 'secondary' : 'accent-soft'} icon={<Zap size={18} aria-hidden />} onClick={() => setQuickOpen(true)} block>
+            ざっくり記録
+          </Button>
         </div>
         {foods.length > 0 && <QuickFoods foods={foods} date={today} limit={QUICK_LIMIT} onMore={() => navigate('/meals')} />}
       </Section>
 
       <PhotoEstimateSheet open={photoOpen} onClose={() => setPhotoOpen(false)} date={today} />
+      <QuickMealSheet open={quickOpen} onClose={() => setQuickOpen(false)} date={today} />
     </div>
   )
 }

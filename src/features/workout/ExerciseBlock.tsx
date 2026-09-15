@@ -21,6 +21,8 @@ const SECONDS_STEP = 5
 const MAX_REPS = 999
 const MAX_SECONDS = 3600
 const MAX_WEIGHT = 200
+const TIMING_TICK_MS = 250
+const FLASH_MS = 600
 
 interface ExerciseBlockProps {
   workout: Workout
@@ -29,6 +31,8 @@ interface ExerciseBlockProps {
   exercises: Map<string, Exercise>
   restSecDefault: number
   readOnly: boolean
+  /** 今取り組んでいる種目として ✓ を強調表示する */
+  active: boolean
 }
 
 interface Draft {
@@ -37,7 +41,9 @@ interface Draft {
   weightKg: number
 }
 
-export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefault, readOnly }: ExerciseBlockProps) {
+type PlannedSet = Pick<WorkoutSet, 'reps' | 'seconds' | 'weightKg'>
+
+export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefault, readOnly, active }: ExerciseBlockProps) {
   const timer = useRestTimer()
   const lastSets = useLiveQuery(() => getLastSetsForExercise(exercise.id, workout.id), [exercise.id, workout.id])
   const lastWorkout = useLiveQuery(async () => (lastSets && lastSets[0] ? db.workouts.get(lastSets[0].workoutId) : undefined), [lastSets])
@@ -72,35 +78,43 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
 
   useEffect(() => {
     if (timing === null) return
-    const id = window.setInterval(() => setElapsed(Math.floor((Date.now() - timing) / 1000)), 250)
+    const id = window.setInterval(() => setElapsed(Math.floor((Date.now() - timing) / 1000)), TIMING_TICK_MS)
     return () => window.clearInterval(id)
   }, [timing])
 
   useEffect(() => {
     if (!justDone) return
-    const id = window.setTimeout(() => setJustDone(false), 600)
+    const id = window.setTimeout(() => setJustDone(false), FLASH_MS)
     return () => window.clearTimeout(id)
   }, [justDone])
 
-  const complete = async (d: Draft, startRest = true) => {
-    unlockAudio()
-    tapHaptic()
+  const record = async (s: PlannedSet, startRest: boolean) => {
     await addSet({
       workoutId: workout.id,
       exerciseId: exercise.id,
-      reps: isTime ? undefined : d.reps,
-      seconds: isTime ? d.seconds : undefined,
-      weightKg: exercise.useWeight && d.weightKg > 0 ? d.weightKg : undefined,
+      reps: isTime ? undefined : s.reps,
+      seconds: isTime ? s.seconds : undefined,
+      weightKg: exercise.useWeight && s.weightKg ? s.weightKg : undefined,
     })
     setJustDone(true)
     if (startRest) timer.start(restSec, exercise.name)
   }
 
+  const complete = async (d: Draft) => {
+    unlockAudio()
+    tapHaptic()
+    await record(d, true)
+  }
+
+  /** ゴースト行（前回のセット）をタップしてその値で完了 */
+  const completePlanned = async (s: PlannedSet) => {
+    unlockAudio()
+    tapHaptic()
+    await record(s, true)
+  }
+
   const completeRemaining = async () => {
-    const remaining = planned.slice(done)
-    for (const s of remaining) {
-      await addSet({ workoutId: workout.id, exerciseId: exercise.id, reps: s.reps, seconds: s.seconds, weightKg: s.weightKg })
-    }
+    for (const s of planned.slice(done)) await record(s, false)
     tapHaptic()
   }
 
@@ -114,13 +128,16 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
     if (timing === null) return
     const sec = Math.max(1, Math.round((Date.now() - timing) / 1000))
     setTiming(null)
-    await complete({ ...(draft ?? { reps: 0, seconds: 0, weightKg: 0 }), seconds: sec })
+    tapHaptic()
+    await record({ seconds: sec, weightKg: draft?.weightKg }, true)
   }
 
   const switchToProgression = async () => {
     if (!progression) return
-    const ids = workout.exerciseIds.map((id) => (id === exercise.id ? progression.id : id))
-    await setWorkoutExercises(workout.id, ids)
+    await setWorkoutExercises(
+      workout.id,
+      workout.exerciseIds.map((id) => (id === exercise.id ? progression.id : id)),
+    )
     setMenuOpen(false)
   }
 
@@ -140,9 +157,10 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
   }
 
   const remainingPlanned = planned.slice(done)
+  const doneClass = active ? 'xb__done' : 'xb__done xb__done--idle'
 
   return (
-    <section className={`xb ${justDone ? 'xb--flash' : ''}`} aria-label={exercise.name}>
+    <section className={`xb ${justDone ? 'xb--flash' : ''} ${active && !readOnly ? 'xb--active' : ''}`} aria-label={exercise.name}>
       <header className="xb__head">
         <div className="xb__title">
           <h2 className="xb__name">{exercise.name}</h2>
@@ -167,20 +185,29 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
             </button>
           </li>
         ))}
-        {remainingPlanned.map((s, i) => (
-          <li key={`p${i}`} className="xb__set xb__set--ghost" aria-hidden>
-            <span className="xb__set-no">{done + i + 1}</span>
-            <span className="display xb__set-val">{formatSet(s, exercise)}</span>
-          </li>
-        ))}
+        {!readOnly &&
+          remainingPlanned.map((s, i) => (
+            <li key={`p${i}`}>
+              <button type="button" className="xb__set xb__set--ghost" onClick={() => void completePlanned(s)} aria-label={`セット${done + i + 1}を前回と同じ ${formatSet(s, exercise)} で完了`}>
+                <span className="xb__set-no">{done + i + 1}</span>
+                <span className="display xb__set-val">{formatSet(s, exercise)}</span>
+                <span className="xb__set-hint">タップで完了</span>
+              </button>
+            </li>
+          ))}
       </ol>
 
       {!readOnly && draft && timing !== null && (
         <>
           <button type="button" className="xb__timing" onClick={() => void stopTiming()} aria-label="計測を止めて記録する">
-            <span className="display xb__timing-val">{elapsed}</span>
-            <span className="xb__timing-unit">秒</span>
-            <Square size={20} fill="currentColor" aria-hidden />
+            <span className="xb__timing-main">
+              <span className="display xb__timing-val">{elapsed}</span>
+              <span className="xb__timing-unit">秒</span>
+            </span>
+            <span className="xb__timing-stop">
+              <Square size={16} fill="currentColor" aria-hidden />
+              タップで停止して記録
+            </span>
           </button>
           <button type="button" className="xb__bulk" onClick={() => setTiming(null)}>
             記録せずにやめる
@@ -190,14 +217,16 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
 
       {!readOnly && draft && timing === null && (
         <>
-          <div className="xb__input">
-            {isTime ? (
-              <Stepper value={draft.seconds} onChange={(seconds) => setDraft({ ...draft, seconds })} step={SECONDS_STEP} min={SECONDS_STEP} max={MAX_SECONDS} unit="秒" size="lg" name={`${exercise.name}の秒数`} />
-            ) : (
-              <Stepper value={draft.reps} onChange={(reps) => setDraft({ ...draft, reps })} step={1} min={1} max={MAX_REPS} unit="回" size="lg" name={`${exercise.name}の回数`} />
-            )}
-            {exercise.useWeight && <Stepper value={draft.weightKg} onChange={(weightKg) => setDraft({ ...draft, weightKg })} step={WEIGHT_STEP} min={0} max={MAX_WEIGHT} decimals={1} unit="kg" name={`${exercise.name}の加重`} />}
-            <button type="button" className="xb__done" onClick={() => void complete(draft)} aria-label={`${exercise.name} セット${done + 1}を完了`}>
+          <div className={`xb__input ${exercise.useWeight ? 'xb__input--weight' : ''}`}>
+            <div className="xb__steppers">
+              {isTime ? (
+                <Stepper value={draft.seconds} onChange={(seconds) => setDraft({ ...draft, seconds })} step={SECONDS_STEP} min={SECONDS_STEP} max={MAX_SECONDS} unit="秒" size="lg" name={`${exercise.name}の秒数`} />
+              ) : (
+                <Stepper value={draft.reps} onChange={(reps) => setDraft({ ...draft, reps })} step={1} min={1} max={MAX_REPS} unit="回" size="lg" name={`${exercise.name}の回数`} />
+              )}
+              {exercise.useWeight && <Stepper value={draft.weightKg} onChange={(weightKg) => setDraft({ ...draft, weightKg })} step={WEIGHT_STEP} min={0} max={MAX_WEIGHT} decimals={1} unit="kg" name={`${exercise.name}の加重`} />}
+            </div>
+            <button type="button" className={doneClass} onClick={() => void complete(draft)} aria-label={`${exercise.name} セット${done + 1}を完了`}>
               <Check size={30} strokeWidth={3} aria-hidden />
             </button>
           </div>
@@ -210,10 +239,10 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
         </>
       )}
 
-      {!readOnly && remainingPlanned.length > 0 && (
-        <button type="button" className="xb__bulk" onClick={() => void completeRemaining()}>
-          <CopyCheck size={16} aria-hidden />
-          残り{remainingPlanned.length}セットを前回と同じで完了
+      {!readOnly && timing === null && remainingPlanned.length > 0 && (
+        <button type="button" className="xb__bulk xb__bulk--copy" onClick={() => void completeRemaining()}>
+          <CopyCheck size={18} aria-hidden />
+          前回と同じで残り{remainingPlanned.length}セット完了
         </button>
       )}
 
@@ -262,9 +291,9 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
       >
         <div className="xb__edit">
           {isTime ? (
-            <Stepper value={editDraft.seconds} onChange={(seconds) => setEditDraft({ ...editDraft, seconds })} step={SECONDS_STEP} min={1} max={MAX_SECONDS} unit="秒" size="lg" />
+            <Stepper value={editDraft.seconds} onChange={(seconds) => setEditDraft({ ...editDraft, seconds })} step={SECONDS_STEP} min={1} max={MAX_SECONDS} unit="秒" size="lg" name="秒数" />
           ) : (
-            <Stepper value={editDraft.reps} onChange={(reps) => setEditDraft({ ...editDraft, reps })} step={1} min={1} max={MAX_REPS} unit="回" size="lg" />
+            <Stepper value={editDraft.reps} onChange={(reps) => setEditDraft({ ...editDraft, reps })} step={1} min={1} max={MAX_REPS} unit="回" size="lg" name="回数" />
           )}
           {exercise.useWeight && <Stepper value={editDraft.weightKg} onChange={(weightKg) => setEditDraft({ ...editDraft, weightKg })} step={WEIGHT_STEP} min={0} max={MAX_WEIGHT} decimals={1} unit="kg" label="加重" />}
         </div>

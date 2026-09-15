@@ -22,7 +22,7 @@
 
 .chart__ytick,
 .chart__xtick {
-  fill: var(--text-3);
+  fill: var(--text-2);
   font-family: var(--font-num);
   font-size: 10px;
   font-weight: 600;

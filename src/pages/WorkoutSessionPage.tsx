@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CheckCheck, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { CheckCheck, CopyCheck, Dumbbell, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { db } from '../db/db'
-import { deleteWorkout, finishWorkout, reopenWorkout, setWorkoutExercises } from '../db/repo'
+import { addSet, deleteWorkout, finishWorkout, getLastSetsForExercise, reopenWorkout, setWorkoutExercises } from '../db/repo'
 import { formatDuration, formatLong, todayKey } from '../lib/date'
+import { tapHaptic } from '../lib/feedback'
 import { useSettings } from '../hooks/useSettings'
 import { useRestTimer } from '../hooks/useRestTimer'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -15,8 +16,10 @@ import { useToast } from '../components/ui/Toast'
 import { ExerciseBlock } from '../features/workout/ExerciseBlock'
 import { ExercisePickerSheet } from '../features/workout/ExercisePickerSheet'
 import { useRecentExerciseIds } from '../features/workout/useRecentExerciseIds'
-import { Dumbbell } from 'lucide-react'
+import type { WorkoutSet } from '../types'
 import './WorkoutSessionPage.css'
+
+const CLOCK_TICK_MS = 1000
 
 export function WorkoutSessionPage() {
   const { id = '' } = useParams()
@@ -33,16 +36,30 @@ export function WorkoutSessionPage() {
   const [now, setNow] = useState(() => Date.now())
 
   const exercises = useMemo(() => new Map((exerciseList ?? []).map((e) => [e.id, e])), [exerciseList])
+  const exerciseKey = workout?.exerciseIds.join(',') ?? ''
   const active = !!workout && !workout.endedAt
+
+  // 各種目の前回セット（「全種目を前回と同じで記録」用）
+  const plannedByExercise = useLiveQuery(async () => {
+    const ids = exerciseKey ? exerciseKey.split(',') : []
+    const entries = await Promise.all(ids.map(async (exId) => [exId, await getLastSetsForExercise(exId, id)] as const))
+    return new Map<string, WorkoutSet[]>(entries)
+  }, [exerciseKey, id])
 
   useEffect(() => {
     if (!active) return
-    const t = window.setInterval(() => setNow(Date.now()), 1000)
+    const t = window.setInterval(() => setNow(Date.now()), CLOCK_TICK_MS)
     return () => window.clearInterval(t)
   }, [active])
 
   if (workout === undefined || sets === undefined || exerciseList === undefined) {
-    return <div className="page" />
+    return (
+      <div className="page ws" aria-busy="true">
+        <div className="skeleton skeleton--header" />
+        <div className="skeleton skeleton--card" />
+        <div className="skeleton skeleton--card" />
+      </div>
+    )
   }
   if (workout === null) {
     return (
@@ -52,10 +69,21 @@ export function WorkoutSessionPage() {
     )
   }
 
+  const exerciseIds = workout.exerciseIds
   const isToday = workout.date === todayKey()
   const readOnly = !!workout.endedAt
   const elapsed = (workout.endedAt ?? now) - workout.startedAt
   const totalSets = sets.length
+  const setsOf = (exId: string) => sets.filter((s) => s.exerciseId === exId)
+
+  // 直近でセットを記録した種目を「取り組み中」とみなす。まだ無ければ先頭
+  const latest = sets.reduce<WorkoutSet | null>((acc, s) => (acc === null || s.completedAt > acc.completedAt ? s : acc), null)
+  const activeId = latest?.exerciseId ?? exerciseIds[0]
+
+  const remainingAll = exerciseIds.flatMap((exId) => {
+    const planned = plannedByExercise?.get(exId) ?? []
+    return planned.slice(setsOf(exId).length).map((s) => ({ exId, s }))
+  })
 
   const finish = async () => {
     timer.stop()
@@ -64,8 +92,23 @@ export function WorkoutSessionPage() {
     navigate('/workout', { replace: true })
   }
 
+  const completeAllRemaining = async () => {
+    for (const { exId, s } of remainingAll) {
+      const ex = exercises.get(exId)
+      await addSet({
+        workoutId: workout.id,
+        exerciseId: exId,
+        reps: ex?.type === 'time' ? undefined : s.reps,
+        seconds: ex?.type === 'time' ? s.seconds : undefined,
+        weightKg: ex?.useWeight ? s.weightKg : undefined,
+      })
+    }
+    tapHaptic()
+    toast.show(`${remainingAll.length}セットを前回と同じで記録しました`, 'success')
+  }
+
   const addExercises = async (ids: string[]) => {
-    await setWorkoutExercises(workout.id, [...workout.exerciseIds, ...ids.filter((x) => !workout.exerciseIds.includes(x))])
+    await setWorkoutExercises(workout.id, [...exerciseIds, ...ids.filter((x) => !exerciseIds.includes(x))])
   }
 
   return (
@@ -76,11 +119,11 @@ export function WorkoutSessionPage() {
         title={readOnly ? '完了' : formatDuration(elapsed)}
         action={
           readOnly ? (
-            <Button size="sm" icon={<RotateCcw size={16} aria-hidden />} onClick={() => void reopenWorkout(workout.id)}>
+            <Button icon={<RotateCcw size={16} aria-hidden />} onClick={() => void reopenWorkout(workout.id)}>
               再開
             </Button>
           ) : (
-            <Button size="sm" variant="primary" icon={<CheckCheck size={16} aria-hidden />} onClick={() => void finish()}>
+            <Button variant="primary" icon={<CheckCheck size={16} aria-hidden />} onClick={() => void finish()}>
               終了
             </Button>
           )
@@ -89,7 +132,7 @@ export function WorkoutSessionPage() {
 
       <div className="ws__meta">
         <span>
-          <span className="num">{workout.exerciseIds.length}</span> 種目
+          <span className="num">{exerciseIds.length}</span> 種目
         </span>
         <span>
           <span className="num">{totalSets}</span> セット
@@ -101,8 +144,15 @@ export function WorkoutSessionPage() {
         )}
       </div>
 
+      {!readOnly && remainingAll.length > 0 && (
+        <button type="button" className="ws__all" onClick={() => void completeAllRemaining()}>
+          <CopyCheck size={18} aria-hidden />
+          全種目を前回と同じで記録（残り{remainingAll.length}セット）
+        </button>
+      )}
+
       <div className="ws__blocks">
-        {workout.exerciseIds.map((exId) => {
+        {exerciseIds.map((exId) => {
           const ex = exercises.get(exId)
           if (!ex) return null
           return (
@@ -110,14 +160,15 @@ export function WorkoutSessionPage() {
               key={exId}
               workout={workout}
               exercise={ex}
-              sets={sets.filter((s) => s.exerciseId === exId)}
+              sets={setsOf(exId)}
               exercises={exercises}
               restSecDefault={settings.defaultRestSec}
               readOnly={readOnly}
+              active={exId === activeId}
             />
           )
         })}
-        {workout.exerciseIds.length === 0 && (
+        {exerciseIds.length === 0 && (
           <EmptyState icon={<Dumbbell size={24} />} title="種目がありません" description="種目を追加して始めましょう" action={<Button variant="primary" onClick={() => setPickerOpen(true)}>種目を追加</Button>} />
         )}
       </div>
@@ -134,7 +185,7 @@ export function WorkoutSessionPage() {
         </Button>
       </div>
 
-      <ExercisePickerSheet open={pickerOpen} onClose={() => setPickerOpen(false)} exercises={exerciseList} selectedIds={workout.exerciseIds} recentIds={recentIds} onConfirm={(ids) => void addExercises(ids)} />
+      <ExercisePickerSheet open={pickerOpen} onClose={() => setPickerOpen(false)} exercises={exerciseList} selectedIds={exerciseIds} recentIds={recentIds} onConfirm={(ids) => void addExercises(ids)} />
 
       <Sheet
         open={confirmDelete}

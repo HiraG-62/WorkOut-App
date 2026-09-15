@@ -65,10 +65,12 @@ export function FoodFormSheet({ open, onClose, food, initial, onSaved }: FoodFor
       setError('名前を入力してください')
       return
     }
+    // カロリー未入力なら PFC から補完する
+    const kcal = d.kcal.trim() === '' ? pfcToKcal(num(d.protein), num(d.fat), num(d.carbs)) : num(d.kcal)
     const payload = {
       name: d.name.trim(),
       unitLabel: d.unitLabel.trim() || '1食',
-      kcal: Math.round(num(d.kcal)),
+      kcal: Math.round(kcal),
       protein: num(d.protein),
       fat: num(d.fat),
       carbs: num(d.carbs),
@@ -107,19 +109,28 @@ export function FoodFormSheet({ open, onClose, food, initial, onSaved }: FoodFor
         </div>
       }
     >
-      <div className="stack">
-        <TextField label="名前" value={d.name} onChange={set('name')} placeholder="例: 鶏むね肉 100g" error={error} autoFocus={!food} />
+      <form
+        className="stack"
+        onSubmit={(e) => {
+          e.preventDefault()
+          void save()
+        }}
+      >
+        <TextField label="名前" value={d.name} onChange={set('name')} placeholder="例: 鶏むね肉 100g" error={error} autoFocus={!food} enterKeyHint="next" />
         <TextField label="1回分の量" value={d.unitLabel} onChange={set('unitLabel')} placeholder="例: 1個, 100g, 1杯" hint="記録は「この量 × 倍率」で行います" />
-        <TextField label="カロリー" type="number" inputMode="decimal" value={d.kcal} onChange={set('kcal')} suffix="kcal" placeholder="0" />
+        <TextField label="カロリー" type="number" inputMode="decimal" value={d.kcal} onChange={set('kcal')} suffix="kcal" placeholder="0" hint="空欄なら PFC から自動計算します" />
         <div className="ff__pfc">
           <TextField label="タンパク質" type="number" inputMode="decimal" value={d.protein} onChange={set('protein')} suffix="g" placeholder="0" />
           <TextField label="脂質" type="number" inputMode="decimal" value={d.fat} onChange={set('fat')} suffix="g" placeholder="0" />
-          <TextField label="炭水化物" type="number" inputMode="decimal" value={d.carbs} onChange={set('carbs')} suffix="g" placeholder="0" />
+          <TextField label="炭水化物" type="number" inputMode="decimal" value={d.carbs} onChange={set('carbs')} suffix="g" placeholder="0" enterKeyHint="done" />
         </div>
         <Button variant="ghost" size="sm" onClick={fillKcal}>
           PFC からカロリーを計算
         </Button>
-      </div>
+        <button type="submit" className="sr-only" tabIndex={-1}>
+          保存
+        </button>
+      </form>
     </Sheet>
   )
 }

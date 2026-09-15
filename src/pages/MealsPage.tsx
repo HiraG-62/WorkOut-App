@@ -59,17 +59,13 @@ export function MealsPage() {
         }
       />
 
-      <Card>
-        <NutritionSummary totals={totals} targets={settings.targets} />
-      </Card>
-
-      <div className="mp__actions">
+      <div className={`mp__actions ${aiReady ? 'mp__actions--five' : ''}`}>
         {aiReady && (
           <Button variant="primary" icon={<Camera size={18} aria-hidden />} onClick={() => setSheet('photo')}>
             写真
           </Button>
         )}
-        <Button icon={<Zap size={18} aria-hidden />} onClick={() => setSheet('quick')}>
+        <Button variant={aiReady ? 'secondary' : 'primary'} icon={<Zap size={18} aria-hidden />} onClick={() => setSheet('quick')}>
           ざっくり
         </Button>
         <Button icon={<Search size={18} aria-hidden />} onClick={() => setSheet('picker')}>
@@ -86,7 +82,7 @@ export function MealsPage() {
       <Section title="よく食べるもの">
         {foods.length === 0 ? (
           <div className="mp__nofood">
-            <p className="muted">よく食べるものを登録すると、ここからワンタップで記録できます。</p>
+            <p className="muted">よく食べるものを登録すると、ここからワンタップで記録できます。まずは「ざっくり」で今日の分を残すだけでも大丈夫です。</p>
             <Button variant="accent-soft" onClick={() => setSheet('form')}>
               フードを登録する
             </Button>
@@ -96,9 +92,13 @@ export function MealsPage() {
         )}
       </Section>
 
+      <Card>
+        <NutritionSummary totals={totals} targets={settings.targets} compact />
+      </Card>
+
       <Section title={`${formatRelative(date)}の記録`}>
         {entries.length === 0 ? (
-          <EmptyState icon={<UtensilsCrossed size={24} />} title="まだ記録がありません" description={aiReady ? '写真を撮るか、よく食べるものをタップして記録' : 'よく食べるものをタップするだけで記録できます'} />
+          <EmptyState icon={<UtensilsCrossed size={24} />} title="まだ記録がありません" description={aiReady ? '写真を撮るか、「ざっくり」で目安だけ残しましょう' : '「ざっくり」なら数値の目安だけで10秒で記録できます'} />
         ) : (
           <MealEntryList entries={entries} />
         )}

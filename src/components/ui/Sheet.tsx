@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import './Sheet.css'
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+const KEYBOARD_THRESHOLD_PX = 120
 
 interface SheetProps {
   open: boolean
@@ -57,6 +58,24 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
     // 入力があれば最初の入力へ、なければパネル自体にフォーカス
     const autoFocusTarget = panelRef.current.querySelector<HTMLElement>('[autofocus]')
     ;(autoFocusTarget ?? panelRef.current).focus()
+  }, [open])
+
+  // ソフトウェアキーボード表示中はシートの高さを可視領域に合わせ、フッターが隠れないようにする
+  useEffect(() => {
+    if (!open) return
+    const vv = window.visualViewport
+    const panel = panelRef.current
+    if (!vv || !panel) return
+    const apply = () => {
+      const keyboardOpen = vv.height < window.innerHeight - KEYBOARD_THRESHOLD_PX
+      panel.style.maxHeight = keyboardOpen ? `${vv.height}px` : ''
+    }
+    vv.addEventListener('resize', apply)
+    apply()
+    return () => {
+      vv.removeEventListener('resize', apply)
+      panel.style.maxHeight = ''
+    }
   }, [open])
 
   if (!open) return null

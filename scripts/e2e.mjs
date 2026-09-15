@@ -256,7 +256,7 @@ try {
   await shot('session-prefilled')
   const ghost = await page.$$eval('.xb__set--ghost', (els) => els.length)
   assert(ghost >= 3, `前回のセットがプリセット表示される (${ghost})`)
-  await clickText('残り2セットを前回と同じで完了')
+  await clickText('前回と同じで残り2セット完了')
   await sleep(400)
   const bulkDone = await page.$$eval('.xb__set--done', (els) => els.length)
   assert(bulkDone === 2, `一括完了で2セット記録 (${bulkDone})`)

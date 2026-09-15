@@ -16,21 +16,24 @@
 
 .st__targets {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-4) var(--s-2);
+  grid-template-columns: 1fr;
+  gap: var(--s-3);
+}
+
+.st__targets .stepper {
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.st__targets .stepper__label {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 14px;
+  color: var(--text-2);
 }
 
 .st__targets .stepper__num {
   font-size: 28px;
-}
-
-.st__targets .stepper__value {
-  min-width: 72px;
-}
-
-.st__targets .stepper__btn {
-  width: 38px;
-  height: 38px;
 }
 
 .st__key {

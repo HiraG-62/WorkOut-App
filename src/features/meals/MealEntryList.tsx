@@ -12,6 +12,7 @@ import './MealEntryList.css'
 const QTY_STEP = 0.5
 const QTY_MIN = 0.5
 const QTY_MAX = 20
+const QTY_PRESETS = [0.5, 1, 1.5, 2] as const
 
 interface MealEntryListProps {
   entries: MealEntry[]
@@ -34,9 +35,9 @@ export function MealEntryList({ entries }: MealEntryListProps) {
     setQty(e.quantity)
   }
 
-  const save = async () => {
+  const save = async (value = qty) => {
     if (!editing) return
-    if (qty !== editing.quantity) await updateMealQuantity(editing, qty)
+    if (value !== editing.quantity) await updateMealQuantity(editing, value)
     setEditing(null)
   }
 
@@ -96,6 +97,13 @@ export function MealEntryList({ entries }: MealEntryListProps) {
       >
         {editing && (
           <div className="stack">
+            <div className="mel__presets" role="group" aria-label="分量の目安">
+              {QTY_PRESETS.map((q) => (
+                <button key={q} type="button" className={`mel__preset ${qty === q ? 'mel__preset--on' : ''}`} onClick={() => void save(q)}>
+                  ×{fmt1(q)}
+                </button>
+              ))}
+            </div>
             <Stepper value={qty} onChange={setQty} step={QTY_STEP} min={QTY_MIN} max={QTY_MAX} decimals={1} unit="倍" label="分量" size="lg" />
             <p className="muted mel__preview">
               {Math.round((editing.kcal / (editing.quantity || 1)) * qty)} kcal · P{fmt1((editing.protein / (editing.quantity || 1)) * qty)} F

@@ -2,19 +2,24 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react'
 import './Toast.css'
 
-const TOAST_MS = 3200
+const DEFAULT_TOAST_MS = 3200
 
 type ToastKind = 'success' | 'error' | 'info'
+
+interface ToastAction {
+  label: string
+  onClick: () => void
+}
 
 interface ToastItem {
   id: number
   kind: ToastKind
   message: string
-  action?: { label: string; onClick: () => void }
+  action?: ToastAction
 }
 
 interface ToastApi {
-  show: (message: string, kind?: ToastKind, action?: ToastItem['action']) => void
+  show: (message: string, kind?: ToastKind, action?: ToastAction, durationMs?: number) => void
 }
 
 const ToastContext = createContext<ToastApi | null>(null)
@@ -22,42 +27,52 @@ const ToastContext = createContext<ToastApi | null>(null)
 const ICONS = { success: CheckCircle2, error: AlertCircle, info: Info } as const
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<ToastItem[]>([])
+  // 同時に出すのは1件だけ。新しいものが来たら置き換える
+  const [item, setItem] = useState<ToastItem | null>(null)
   const seq = useRef(0)
+  const timer = useRef<number | null>(null)
 
-  const show = useCallback<ToastApi['show']>((message, kind = 'info', action) => {
-    const id = ++seq.current
-    setItems((list) => [...list.slice(-2), { id, kind, message, action }])
-    window.setTimeout(() => setItems((list) => list.filter((t) => t.id !== id)), TOAST_MS)
+  const dismiss = useCallback(() => {
+    if (timer.current) window.clearTimeout(timer.current)
+    timer.current = null
+    setItem(null)
   }, [])
 
+  const show = useCallback<ToastApi['show']>(
+    (message, kind = 'info', action, durationMs = DEFAULT_TOAST_MS) => {
+      const id = ++seq.current
+      if (timer.current) window.clearTimeout(timer.current)
+      setItem({ id, kind, message, action })
+      timer.current = window.setTimeout(() => setItem((cur) => (cur?.id === id ? null : cur)), durationMs)
+    },
+    [],
+  )
+
   const api = useMemo(() => ({ show }), [show])
+  const Icon = item ? ICONS[item.kind] : null
 
   return (
     <ToastContext.Provider value={api}>
       {children}
       <div className="toast-stack" aria-live="polite">
-        {items.map((t) => {
-          const Icon = ICONS[t.kind]
-          return (
-            <div key={t.id} className={`toast toast--${t.kind}`} role="status">
-              <Icon size={18} aria-hidden />
-              <span className="toast__msg">{t.message}</span>
-              {t.action && (
-                <button
-                  type="button"
-                  className="toast__action"
-                  onClick={() => {
-                    t.action?.onClick()
-                    setItems((list) => list.filter((x) => x.id !== t.id))
-                  }}
-                >
-                  {t.action.label}
-                </button>
-              )}
-            </div>
-          )
-        })}
+        {item && Icon && (
+          <div key={item.id} className={`toast toast--${item.kind}`} role="status" onClick={item.action ? undefined : dismiss}>
+            <Icon size={18} aria-hidden />
+            <span className="toast__msg">{item.message}</span>
+            {item.action && (
+              <button
+                type="button"
+                className="toast__action"
+                onClick={() => {
+                  item.action?.onClick()
+                  dismiss()
+                }}
+              >
+                {item.action.label}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </ToastContext.Provider>
   )

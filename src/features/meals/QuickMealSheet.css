@@ -2,6 +2,30 @@
   font-size: 14px;
 }
 
+.qm__presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-2);
+}
+
+.qm__preset {
+  min-height: var(--tap);
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-family: var(--font-num);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-2);
+  transition: background-color var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+
+.qm__preset--on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .qm__grid {
   display: flex;
   flex-direction: column;

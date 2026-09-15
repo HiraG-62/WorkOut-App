@@ -12,6 +12,7 @@ import { useToast } from '../../components/ui/Toast'
 import { AI_PROVIDERS, type FoodEstimate, type FoodEstimateItem } from '../../types'
 import './PhotoEstimateSheet.css'
 
+const AI_TIMEOUT_MS = 90_000
 const CONFIDENCE_LABEL = { low: '自信なし', medium: 'まあまあ', high: '自信あり' } as const
 
 interface PhotoEstimateSheetProps {
@@ -32,12 +33,20 @@ export function PhotoEstimateSheet({ open, onClose, date }: PhotoEstimateSheetPr
   const toast = useToast()
   const guard = useBusy()
   const fileRef = useRef<HTMLInputElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
   const [phase, setPhase] = useState<Phase>('pick')
   const [image, setImage] = useState<EncodedImage | null>(null)
   const [hint, setHint] = useState('')
   const [result, setResult] = useState<FoodEstimate | null>(null)
   const [items, setItems] = useState<ResultItem[]>([])
   const [error, setError] = useState('')
+
+  // 閉じたら進行中の推定を打ち切る（遅れて届いた結果が次回に混ざらないように）
+  useEffect(() => {
+    if (open) return
+    abortRef.current?.abort()
+    abortRef.current = null
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -78,16 +87,24 @@ export function PhotoEstimateSheet({ open, onClose, date }: PhotoEstimateSheetPr
       setError('設定画面で AI の API キーを登録してください')
       return
     }
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    const timeout = window.setTimeout(() => controller.abort(), AI_TIMEOUT_MS)
     setPhase('loading')
     setError('')
     try {
-      const res = await client.estimateFood({ imageBase64: image.base64, mediaType: image.mediaType, hint })
+      const res = await client.estimateFood({ imageBase64: image.base64, mediaType: image.mediaType, hint }, controller.signal)
+      if (controller.signal.aborted) return
       setResult(res)
       setItems(res.items.map((it) => ({ ...it, include: true, saveAsFood: false })))
       setPhase('result')
     } catch (err) {
-      setError(err instanceof AiError ? err.message : '推定に失敗しました')
+      if (controller.signal.aborted && abortRef.current !== controller) return
+      setError(controller.signal.aborted ? '時間がかかりすぎたため中断しました' : err instanceof AiError ? err.message : '推定に失敗しました')
       setPhase('preview')
+    } finally {
+      window.clearTimeout(timeout)
     }
   }
 
@@ -131,7 +148,7 @@ export function PhotoEstimateSheet({ open, onClose, date }: PhotoEstimateSheetPr
         ) : undefined
       }
     >
-      <input ref={fileRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => void onFile(e)} aria-label="写真を選ぶ" />
+      <input ref={fileRef} type="file" accept="image/*" className="sr-only" onChange={(e) => void onFile(e)} aria-label="写真を選ぶ" />
 
       {phase === 'pick' && (
         <div className="pe__pick">

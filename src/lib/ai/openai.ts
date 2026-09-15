@@ -12,6 +12,7 @@ import {
 import {
   AiError,
   httpStatusToAiError,
+  isAbortError,
   parseJsonText,
   type AiClient,
   type AiClientConfig,
@@ -54,6 +55,7 @@ export function createOpenAiClient(config: AiClientConfig): AiClient {
     parts: ContentPart[],
     schemaName: string,
     schema: Record<string, unknown>,
+    signal?: AbortSignal,
   ): Promise<unknown> {
     let res: Response
     try {
@@ -63,6 +65,7 @@ export function createOpenAiClient(config: AiClientConfig): AiClient {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${config.apiKey}`,
         },
+        signal,
         body: JSON.stringify({
           model: config.model,
           messages: [
@@ -75,7 +78,8 @@ export function createOpenAiClient(config: AiClientConfig): AiClient {
           },
         }),
       })
-    } catch {
+    } catch (e) {
+      if (isAbortError(e)) throw new AiError('aborted', '中断しました')
       throw new AiError('network', 'ネットワークに接続できません')
     }
     const data = (await res.json().catch(() => ({}))) as ChatResponse
@@ -87,7 +91,7 @@ export function createOpenAiClient(config: AiClientConfig): AiClient {
   }
 
   return {
-    async estimateFood(req: FoodEstimateRequest): Promise<FoodEstimate> {
+    async estimateFood(req: FoodEstimateRequest, signal?: AbortSignal): Promise<FoodEstimate> {
       const raw = await callJson(
         FOOD_SYSTEM_PROMPT,
         [
@@ -99,18 +103,20 @@ export function createOpenAiClient(config: AiClientConfig): AiClient {
         ],
         'food_estimate',
         FOOD_ESTIMATE_JSON_SCHEMA,
+        signal,
       )
       const parsed = FoodEstimateSchema.safeParse(raw)
       if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
       return parsed.data
     },
 
-    async suggestTargets(req: TargetSuggestionRequest): Promise<TargetSuggestion> {
+    async suggestTargets(req: TargetSuggestionRequest, signal?: AbortSignal): Promise<TargetSuggestion> {
       const raw = await callJson(
         TARGET_SYSTEM_PROMPT,
         [{ type: 'text', text: targetUserPrompt(req.profile, req.weightKg, req.currentTargets) }],
         'target_suggestion',
         TARGET_SUGGESTION_JSON_SCHEMA,
+        signal,
       )
       const parsed = TargetSuggestionSchema.safeParse(raw)
       if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')

@@ -23,6 +23,7 @@ const MAX_TOKENS = 4096
 
 function toAiError(e: unknown): AiError {
   if (e instanceof AiError) return e
+  if (e instanceof Anthropic.APIUserAbortError) return new AiError('aborted', '中断しました')
   if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) {
     return new AiError('auth', 'APIキーが無効です。設定を確認してください')
   }
@@ -46,20 +47,24 @@ export function createClaudeClient(config: AiClientConfig): AiClient {
     system: string,
     content: Anthropic.Beta.BetaContentBlockParam[],
     schema: Record<string, unknown>,
+    signal?: AbortSignal,
   ): Promise<unknown> {
     try {
-      const res = await client.beta.messages.create({
-        model: config.model,
-        max_tokens: MAX_TOKENS,
-        system,
-        messages: [{ role: 'user', content }],
-        output_config: {
-          format: { type: 'json_schema', schema },
+      const res = await client.beta.messages.create(
+        {
+          model: config.model,
+          max_tokens: MAX_TOKENS,
+          system,
+          messages: [{ role: 'user', content }],
+          output_config: {
+            format: { type: 'json_schema', schema },
+          },
+          // 安全分類器で拒否された場合はサーバー側で別モデルに自動フォールバックする
+          betas: ['server-side-fallback-2026-07-01'],
+          fallbacks: 'default',
         },
-        // 安全分類器で拒否された場合はサーバー側で別モデルに自動フォールバックする
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
-      })
+        { signal },
+      )
       if (res.stop_reason === 'refusal') {
         throw new AiError('refused', 'AIがこのリクエストを処理できませんでした')
       }
@@ -74,7 +79,7 @@ export function createClaudeClient(config: AiClientConfig): AiClient {
   }
 
   return {
-    async estimateFood(req: FoodEstimateRequest): Promise<FoodEstimate> {
+    async estimateFood(req: FoodEstimateRequest, signal?: AbortSignal): Promise<FoodEstimate> {
       const raw = await callJson(
         FOOD_SYSTEM_PROMPT,
         [
@@ -82,17 +87,19 @@ export function createClaudeClient(config: AiClientConfig): AiClient {
           { type: 'text', text: foodUserPrompt(req.hint) },
         ],
         FOOD_ESTIMATE_JSON_SCHEMA,
+        signal,
       )
       const parsed = FoodEstimateSchema.safeParse(raw)
       if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
       return parsed.data
     },
 
-    async suggestTargets(req: TargetSuggestionRequest): Promise<TargetSuggestion> {
+    async suggestTargets(req: TargetSuggestionRequest, signal?: AbortSignal): Promise<TargetSuggestion> {
       const raw = await callJson(
         TARGET_SYSTEM_PROMPT,
         [{ type: 'text', text: targetUserPrompt(req.profile, req.weightKg, req.currentTargets) }],
         TARGET_SUGGESTION_JSON_SCHEMA,
+        signal,
       )
       const parsed = TargetSuggestionSchema.safeParse(raw)
       if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')

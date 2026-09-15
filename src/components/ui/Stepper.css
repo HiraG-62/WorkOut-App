@@ -25,6 +25,9 @@
 }
 
 .stepper__btn {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   width: var(--tap);
   height: var(--tap);
   border-radius: var(--r-full);

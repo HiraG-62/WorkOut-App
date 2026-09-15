@@ -30,8 +30,9 @@ export function WorkoutPage() {
   }
 
   const exercises = useMemo(() => new Map((exerciseList ?? []).map((e) => [e.id, e])), [exerciseList])
-  const todayWorkout = workouts?.find((w) => w.date === today)
-  const lastWorkout = workouts?.find((w) => w.date !== today)
+  // 日をまたいだ進行中のワークアウトも「今日の」扱いにする
+  const todayWorkout = workouts?.find((w) => !w.endedAt) ?? workouts?.find((w) => w.date === today)
+  const lastWorkout = workouts?.find((w) => w.id !== todayWorkout?.id)
   const setsOf = (id: string) => (allSets ?? []).filter((s) => s.workoutId === id)
 
   const startFromLast = async () => {

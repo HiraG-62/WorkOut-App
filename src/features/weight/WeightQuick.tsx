@@ -37,7 +37,8 @@ export function WeightQuick({ compact = false }: WeightQuickProps) {
     timer.current = window.setTimeout(() => {
       void upsertWeight(draft).then(() => {
         setSaved(true)
-        setDraft(null)
+        // 保存中にさらに操作していたら、その値を残す
+        setDraft((cur) => (cur === draft ? null : cur))
       })
     }, SAVE_DEBOUNCE_MS)
     return () => {

@@ -1,4 +1,4 @@
-import { db } from '../db/db'
+import { db, DEFAULT_SETTINGS } from '../db/db'
 import type { Exercise, Food, MealEntry, MealSet, Settings, WeightEntry, Workout, WorkoutSet } from '../types'
 
 const BACKUP_VERSION = 1
@@ -44,6 +44,21 @@ export async function exportBackup(): Promise<string> {
     settings: safeSettings,
   }
   return JSON.stringify(backup)
+}
+
+/** iOS のスタンドアロン PWA では download が効かないため、共有シートが使えるならそちらを優先 */
+export async function saveTextFile(filename: string, text: string): Promise<void> {
+  const file = new File([text], filename, { type: 'application/json' })
+  if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: filename })
+      return
+    } catch (e) {
+      // ユーザーがキャンセルした場合はそのまま終了
+      if (e instanceof DOMException && e.name === 'AbortError') return
+    }
+  }
+  downloadText(filename, text)
 }
 
 export function downloadText(filename: string, text: string): void {
@@ -99,7 +114,21 @@ export async function importBackup(json: string): Promise<void> {
       db.weights.bulkAdd(b.weights),
     ])
     if (b.settings) {
-      await db.settings.put({ ...b.settings, id: 'app', ai: { ...b.settings.ai, keys: current?.ai.keys ?? { ...EMPTY_KEYS } } })
+      // 古い/欠けたフィールドは既定値で補う
+      const merged: Settings = {
+        ...DEFAULT_SETTINGS,
+        ...b.settings,
+        id: 'app',
+        profile: { ...DEFAULT_SETTINGS.profile, ...b.settings.profile },
+        targets: { ...DEFAULT_SETTINGS.targets, ...b.settings.targets },
+        ai: {
+          ...DEFAULT_SETTINGS.ai,
+          ...b.settings.ai,
+          models: { ...DEFAULT_SETTINGS.ai.models, ...b.settings.ai?.models },
+          keys: current?.ai.keys ?? { ...EMPTY_KEYS },
+        },
+      }
+      await db.settings.put(merged)
     }
   })
 }

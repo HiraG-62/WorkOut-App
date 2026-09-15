@@ -65,7 +65,8 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
   const planned = lastSets ?? []
   const isTime = exercise.type === 'time'
   const restSec = exercise.restSec ?? restSecDefault
-  const progression = exercise.progressionId ? exercises.get(exercise.progressionId) : undefined
+  const progressionCandidate = exercise.progressionId ? exercises.get(exercise.progressionId) : undefined
+  const progression = progressionCandidate && !progressionCandidate.archived ? progressionCandidate : undefined
 
   // 次のセットの初期値: 前回の同じ番目のセット → 前回の最後 → 今回の最後 → デフォルト
   useEffect(() => {

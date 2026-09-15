@@ -1,4 +1,4 @@
-import type { AiConfig } from '../../types'
+import { AI_PROVIDERS, type AiConfig } from '../../types'
 import type { AiClient } from './types'
 
 export { AiError } from './types'
@@ -8,7 +8,7 @@ export type { AiClient } from './types'
 export async function createAiClient(config: AiConfig): Promise<AiClient | null> {
   const apiKey = config.keys[config.provider].trim()
   if (!apiKey) return null
-  const model = config.models[config.provider].trim() || DEFAULT_MODELS[config.provider]
+  const model = config.models[config.provider].trim() || AI_PROVIDERS[config.provider].defaultModel
   switch (config.provider) {
     case 'claude': {
       const { createClaudeClient } = await import('./claude')
@@ -23,12 +23,6 @@ export async function createAiClient(config: AiConfig): Promise<AiClient | null>
       return createGeminiClient({ apiKey, model })
     }
   }
-}
-
-const DEFAULT_MODELS: Record<AiConfig['provider'], string> = {
-  claude: 'claude-opus-5',
-  openai: 'gpt-5',
-  gemini: 'gemini-2.5-flash',
 }
 
 export function isAiConfigured(config: AiConfig): boolean {

@@ -16,7 +16,3 @@ export function summarizeSets(sets: WorkoutSet[], exercises: Map<string, Exercis
   // セットを記録した種目だけ出す。まだ何も記録していなければ種目名だけ並べる
   return (withSets.length > 0 ? withSets.map((p) => `${p.name} ${p.n}set`) : present.map((p) => p.name)).join(' · ')
 }
-
-export function totalVolume(sets: WorkoutSet[]): { reps: number; seconds: number } {
-  return sets.reduce((acc, s) => ({ reps: acc.reps + (s.reps ?? 0), seconds: acc.seconds + (s.seconds ?? 0) }), { reps: 0, seconds: 0 })
-}

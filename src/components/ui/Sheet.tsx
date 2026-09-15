@@ -5,6 +5,29 @@ import './Sheet.css'
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 const KEYBOARD_THRESHOLD_PX = 120
+const ROOT_ID = 'root'
+
+/** 開いているシートのスタック。Esc は最上位だけが処理し、背景は inert にする */
+const openStack: symbol[] = []
+
+function pushSheet(token: symbol): void {
+  openStack.push(token)
+  document.getElementById(ROOT_ID)?.setAttribute('inert', '')
+  document.body.style.overflow = 'hidden'
+}
+
+function popSheet(token: symbol): void {
+  const i = openStack.indexOf(token)
+  if (i !== -1) openStack.splice(i, 1)
+  if (openStack.length === 0) {
+    document.getElementById(ROOT_ID)?.removeAttribute('inert')
+    document.body.style.overflow = ''
+  }
+}
+
+function isTopSheet(token: symbol): boolean {
+  return openStack[openStack.length - 1] === token
+}
 
 interface SheetProps {
   open: boolean
@@ -20,14 +43,23 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
   const titleId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
   const restoreFocusRef = useRef<HTMLElement | null>(null)
+  const onCloseRef = useRef(onClose)
+  const tokenRef = useRef<symbol>(Symbol('sheet'))
 
-  // 開いている間: Esc で閉じる、Tab をシート内に閉じ込める、背景スクロールを止める
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
+  // 開いている間: Esc で閉じる（最上位のみ）、Tab をシート内に閉じ込める、背景を inert にする
   useEffect(() => {
     if (!open) return
+    const token = tokenRef.current
     restoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    pushSheet(token)
     const onKey = (e: KeyboardEvent) => {
+      if (!isTopSheet(token)) return
       if (e.key === 'Escape') {
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key !== 'Tab' || !panelRef.current) return
@@ -44,14 +76,12 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
       }
     }
     document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
+      popSheet(token)
       restoreFocusRef.current?.focus()
     }
-  }, [open, onClose])
+  }, [open])
 
   useEffect(() => {
     const panel = panelRef.current
@@ -69,12 +99,14 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
     const apply = () => {
       const keyboardOpen = vv.height < window.innerHeight - KEYBOARD_THRESHOLD_PX
       panel.style.maxHeight = keyboardOpen ? `${vv.height}px` : ''
+      panel.style.height = keyboardOpen && panel.classList.contains('sheet--tall') ? `${vv.height}px` : ''
     }
     vv.addEventListener('resize', apply)
     apply()
     return () => {
       vv.removeEventListener('resize', apply)
       panel.style.maxHeight = ''
+      panel.style.height = ''
     }
   }, [open])
 
@@ -82,7 +114,7 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
 
   return createPortal(
     <div className="sheet-root">
-      <div className="sheet__scrim" onClick={onClose} aria-hidden />
+      <div className="sheet__scrim" onClick={() => onCloseRef.current()} aria-hidden />
       <div
         ref={panelRef}
         className={`sheet ${tall ? 'sheet--tall' : ''}`}
@@ -98,7 +130,7 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
               {title}
             </h2>
           )}
-          <button type="button" className="sheet__close" onClick={onClose} aria-label="閉じる">
+          <button type="button" className="sheet__close" onClick={() => onCloseRef.current()} aria-label="閉じる">
             <X size={20} aria-hidden />
           </button>
         </div>

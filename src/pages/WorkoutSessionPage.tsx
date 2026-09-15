@@ -66,7 +66,7 @@ export function WorkoutSessionPage() {
   if (workout === null) {
     return (
       <div className="page">
-        <PageHeader title="見つかりません" back />
+        <PageHeader title="見つかりません" back backTo="/workout" />
       </div>
     )
   }
@@ -89,8 +89,14 @@ export function WorkoutSessionPage() {
 
   const finish = async () => {
     timer.stop()
-    await finishWorkout(workout.id)
-    toast.show(`お疲れさま！ ${totalSets}セット完了`, 'success')
+    if (totalSets === 0) {
+      // 空のワークアウトは履歴に残さない
+      await deleteWorkout(workout.id)
+      toast.show('記録がなかったのでワークアウトを削除しました', 'info')
+    } else {
+      await finishWorkout(workout.id)
+      toast.show(`お疲れさま！ ${totalSets}セット完了`, 'success')
+    }
     navigate('/workout', { replace: true })
   }
 
@@ -118,8 +124,9 @@ export function WorkoutSessionPage() {
     <div className="page ws">
       <PageHeader
         back
+        backTo="/workout"
         eyebrow={isToday ? '今日のワークアウト' : formatLong(workout.date)}
-        title={readOnly ? '完了' : formatDuration(elapsed)}
+        title={readOnly ? '完了' : isToday ? formatDuration(elapsed) : '進行中'}
         action={
           readOnly ? (
             <Button icon={<RotateCcw size={16} aria-hidden />} onClick={() => void reopenWorkout(workout.id)}>

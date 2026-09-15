@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Layers, Plus, Trash2 } from 'lucide-react'
 import { db } from '../../db/db'
+import { formatRelative } from '../../lib/date'
 import { addMealSet, deleteMealSet, logMealSet } from '../../db/repo'
 import { Sheet } from '../../components/ui/Sheet'
 import { Button } from '../../components/ui/Button'
@@ -11,6 +12,8 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { TextField } from '../../components/ui/Field'
 import type { MealEntry } from '../../types'
 import './MealSetsSheet.css'
+
+const UNDO_MS = 6000
 
 interface MealSetsSheetProps {
   open: boolean
@@ -28,8 +31,18 @@ export function MealSetsSheet({ open, onClose, date, todayEntries }: MealSetsShe
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
 
-  const foodName = (id: string) => foods?.find((f) => f.id === id)?.name ?? '(削除済み)'
+  const foodName = (id: string) => {
+    const f = foods?.find((x) => x.id === id)
+    return !f || f.archived ? '(削除済み)' : f.name
+  }
+  const removeSet = async (id: string) => {
+    const set = sets?.find((s) => s.id === id)
+    if (!set) return
+    await deleteMealSet(id)
+    toast.show(`${set.name} を削除しました`, 'info', { label: '取り消す', onClick: () => void db.mealSets.put(set) }, UNDO_MS)
+  }
   const sourceItems = todayEntries.filter((e) => e.foodId)
+  const dayLabel = formatRelative(date)
 
   const create = async () => {
     if (!name.trim() || sourceItems.length === 0) return
@@ -46,8 +59,8 @@ export function MealSetsSheet({ open, onClose, date, todayEntries }: MealSetsShe
     guard(async () => {
       const set = sets?.find((s) => s.id === id)
       if (!set) return
-      const n = await logMealSet(set, date)
-      toast.show(`${set.name} の${n}品を記録しました`, 'success')
+      const { logged, skipped } = await logMealSet(set, date)
+      toast.show(skipped > 0 ? `${set.name} の${logged}品を記録（削除済みの${skipped}品はスキップ）` : `${set.name} の${logged}品を記録しました`, 'success')
       onClose()
     })
 
@@ -58,7 +71,7 @@ export function MealSetsSheet({ open, onClose, date, todayEntries }: MealSetsShe
           <div className="ms__create">
             <TextField label="セット名" value={name} onChange={(e) => setName(e.target.value)} placeholder="例: いつもの朝食" autoFocus />
             <p className="ms__source">
-              {sourceItems.length > 0 ? `今日の ${sourceItems.length} 品（フード登録済みのもの）をまとめます` : '今日はフードから記録した食事がありません'}
+              {sourceItems.length > 0 ? `${dayLabel}の ${sourceItems.length} 品（フード登録済みのもの）をまとめます` : `${dayLabel}はフードから記録した食事がありません`}
             </p>
             <div className="row">
               <Button onClick={() => setCreating(false)}>やめる</Button>
@@ -69,7 +82,7 @@ export function MealSetsSheet({ open, onClose, date, todayEntries }: MealSetsShe
           </div>
         ) : (
           <Button variant="accent-soft" block icon={<Plus size={18} aria-hidden />} onClick={() => setCreating(true)}>
-            今日の食事からセットを作る
+            {dayLabel}の食事からセットを作る
           </Button>
         )}
 
@@ -84,7 +97,7 @@ export function MealSetsSheet({ open, onClose, date, todayEntries }: MealSetsShe
                 <span className="ms__name">{s.name}</span>
                 <span className="ms__meta">{s.items.map((it) => `${foodName(it.foodId)}${it.quantity !== 1 ? `×${it.quantity}` : ''}`).join('、')}</span>
               </button>
-              <button type="button" className="ms__delete" aria-label={`${s.name} を削除`} onClick={() => void deleteMealSet(s.id)}>
+              <button type="button" className="ms__delete" aria-label={`${s.name} を削除`} onClick={() => void removeSet(s.id)}>
                 <Trash2 size={16} aria-hidden />
               </button>
             </li>

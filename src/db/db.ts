@@ -10,6 +10,7 @@ import type {
   WorkoutSet,
 } from '../types'
 import { SEED_EXERCISES } from './seed'
+import { AI_PROVIDERS } from '../types'
 
 export const DEFAULT_SETTINGS: Settings = {
   id: 'app',
@@ -21,7 +22,11 @@ export const DEFAULT_SETTINGS: Settings = {
   ai: {
     provider: 'claude',
     keys: { claude: '', openai: '', gemini: '' },
-    models: { claude: 'claude-opus-5', openai: 'gpt-5', gemini: 'gemini-2.5-flash' },
+    models: {
+      claude: AI_PROVIDERS.claude.defaultModel,
+      openai: AI_PROVIDERS.openai.defaultModel,
+      gemini: AI_PROVIDERS.gemini.defaultModel,
+    },
   },
   onboarded: false,
 }

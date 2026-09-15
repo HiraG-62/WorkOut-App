@@ -12,6 +12,7 @@ import {
 import {
   AiError,
   httpStatusToAiError,
+  isAbortError,
   parseJsonText,
   type AiClient,
   type AiClientConfig,
@@ -52,6 +53,7 @@ export function createGeminiClient(config: AiClientConfig): AiClient {
     system: string,
     parts: Part[],
     schema: Record<string, unknown>,
+    signal?: AbortSignal,
   ): Promise<unknown> {
     const url = `${BASE}/${encodeURIComponent(config.model)}:generateContent`
     let res: Response
@@ -62,6 +64,7 @@ export function createGeminiClient(config: AiClientConfig): AiClient {
           'Content-Type': 'application/json',
           'x-goog-api-key': config.apiKey,
         },
+        signal,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: 'user', parts }],
@@ -71,12 +74,18 @@ export function createGeminiClient(config: AiClientConfig): AiClient {
           },
         }),
       })
-    } catch {
+    } catch (e) {
+      if (isAbortError(e)) throw new AiError('aborted', '中断しました')
       throw new AiError('network', 'ネットワークに接続できません')
     }
     const data = (await res.json().catch(() => ({}))) as GenerateResponse
-    if (!res.ok) throw httpStatusToAiError(res.status, data.error?.message ?? '')
-    if (data.promptFeedback?.blockReason) {
+    if (!res.ok) {
+      const msg = data.error?.message ?? ''
+      // Gemini は無効キーを 400 で返す
+      if (res.status === 400 && /api key/i.test(msg)) throw new AiError('auth', 'APIキーが無効です。設定を確認してください')
+      throw httpStatusToAiError(res.status, msg)
+    }
+    if (data.promptFeedback?.blockReason || data.candidates?.[0]?.finishReason === 'SAFETY') {
       throw new AiError('refused', 'AIがこのリクエストを処理できませんでした')
     }
     const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
@@ -85,7 +94,7 @@ export function createGeminiClient(config: AiClientConfig): AiClient {
   }
 
   return {
-    async estimateFood(req: FoodEstimateRequest): Promise<FoodEstimate> {
+    async estimateFood(req: FoodEstimateRequest, signal?: AbortSignal): Promise<FoodEstimate> {
       const raw = await callJson(
         FOOD_SYSTEM_PROMPT,
         [
@@ -93,17 +102,19 @@ export function createGeminiClient(config: AiClientConfig): AiClient {
           { text: foodUserPrompt(req.hint) },
         ],
         FOOD_ESTIMATE_JSON_SCHEMA,
+        signal,
       )
       const parsed = FoodEstimateSchema.safeParse(raw)
       if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
       return parsed.data
     },
 
-    async suggestTargets(req: TargetSuggestionRequest): Promise<TargetSuggestion> {
+    async suggestTargets(req: TargetSuggestionRequest, signal?: AbortSignal): Promise<TargetSuggestion> {
       const raw = await callJson(
         TARGET_SYSTEM_PROMPT,
         [{ text: targetUserPrompt(req.profile, req.weightKg, req.currentTargets) }],
         TARGET_SUGGESTION_JSON_SCHEMA,
+        signal,
       )
       const parsed = TargetSuggestionSchema.safeParse(raw)
       if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')

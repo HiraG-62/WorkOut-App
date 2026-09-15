@@ -19,6 +19,7 @@ export function NutritionSummary({ totals, targets, compact = false }: Nutrition
         size={compact ? 104 : 128}
         stroke={compact ? 9 : 11}
         color="var(--kcal)"
+        ariaLabel={`カロリー ${Math.round(totals.kcal)} / ${targets.kcal} kcal`}
         label={String(Math.round(totals.kcal))}
         sub={remain >= 0 ? `残り ${Math.round(remain)}${compact ? '' : ' kcal'}` : `${Math.round(-remain)}${compact ? '' : ' kcal'} 超過`}
       />

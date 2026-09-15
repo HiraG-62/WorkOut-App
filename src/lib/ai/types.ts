@@ -13,8 +13,8 @@ export interface TargetSuggestionRequest {
 }
 
 export interface AiClient {
-  estimateFood(req: FoodEstimateRequest): Promise<FoodEstimate>
-  suggestTargets(req: TargetSuggestionRequest): Promise<TargetSuggestion>
+  estimateFood(req: FoodEstimateRequest, signal?: AbortSignal): Promise<FoodEstimate>
+  suggestTargets(req: TargetSuggestionRequest, signal?: AbortSignal): Promise<TargetSuggestion>
 }
 
 export interface AiClientConfig {
@@ -23,7 +23,7 @@ export interface AiClientConfig {
 }
 
 export class AiError extends Error {
-  readonly kind: 'auth' | 'network' | 'rate' | 'parse' | 'refused' | 'unknown'
+  readonly kind: 'auth' | 'network' | 'rate' | 'parse' | 'refused' | 'aborted' | 'unknown'
 
   constructor(kind: AiError['kind'], message: string) {
     super(message)
@@ -43,6 +43,10 @@ export function parseJsonText(text: string): unknown {
   } catch {
     throw new AiError('parse', 'AIの応答を解釈できませんでした。もう一度お試しください')
   }
+}
+
+export function isAbortError(e: unknown): boolean {
+  return e instanceof DOMException && e.name === 'AbortError'
 }
 
 export function httpStatusToAiError(status: number, detail: string): AiError {

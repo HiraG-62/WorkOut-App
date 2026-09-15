@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Pencil, Plus, Search } from 'lucide-react'
-import { logFood, deleteMeal } from '../../db/repo'
+import { logFood, unlogFood } from '../../db/repo'
 import { tapHaptic } from '../../lib/feedback'
 import { Sheet } from '../../components/ui/Sheet'
 import { Button } from '../../components/ui/Button'
@@ -9,6 +9,8 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { FoodFormSheet } from './FoodFormSheet'
 import type { Food } from '../../types'
 import './FoodPickerSheet.css'
+
+const UNDO_MS = 5000
 
 interface FoodPickerSheetProps {
   open: boolean
@@ -32,7 +34,7 @@ export function FoodPickerSheet({ open, onClose, foods, date }: FoodPickerSheetP
   const log = async (food: Food) => {
     tapHaptic()
     const entry = await logFood(food, 1, date)
-    toast.show(`${food.name} を記録`, 'success', { label: '取り消す', onClick: () => void deleteMeal(entry.id) })
+    toast.show(`${food.name} を記録`, 'success', { label: '取り消す', onClick: () => void unlogFood(entry) }, UNDO_MS)
   }
 
   return (

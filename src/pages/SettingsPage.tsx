@@ -5,7 +5,7 @@ import { db } from '../db/db'
 import { getLatestWeight, updateSettings } from '../db/repo'
 import { calcTargets } from '../lib/nutrition'
 import { createAiClient, AiError } from '../lib/ai'
-import { downloadText, exportBackup, importBackup } from '../lib/backup'
+import { exportBackup, importBackup, saveTextFile } from '../lib/backup'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, Section } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -43,6 +43,7 @@ const FAT_MAX = 300
 const CARBS_MAX = 800
 const SAVE_DEBOUNCE_MS = 400
 const FALLBACK_WEIGHT_KG = 60
+const VIBRATION_SUPPORTED = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'
 
 export function SettingsPage() {
   const settings = useLiveQuery(async () => (await db.settings.get('app')) ?? null, [])
@@ -84,19 +85,18 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
   const [suggestion, setSuggestion] = useState<TargetSuggestion | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const dirty = useRef(false)
-
-  // 変更を自動保存（初期値のままなら書かない）
+  // 変更を自動保存（初期値と同じ内容なら書かない）
   useEffect(() => {
-    if (!dirty.current) {
-      dirty.current = true
-      return
-    }
+    const unchanged =
+      JSON.stringify(profile) === JSON.stringify(initial.profile) &&
+      JSON.stringify(targets) === JSON.stringify(initial.targets) &&
+      JSON.stringify(ai) === JSON.stringify(initial.ai)
+    if (unchanged) return
     const id = window.setTimeout(() => {
       void updateSettings({ profile, targets, ai, onboarded: true })
     }, SAVE_DEBOUNCE_MS)
     return () => window.clearTimeout(id)
-  }, [profile, targets, ai])
+  }, [profile, targets, ai, initial])
 
   const weightKg = latestWeight?.kg ?? FALLBACK_WEIGHT_KG
 
@@ -134,7 +134,7 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
   }
 
   const doExport = async () => {
-    downloadText(`workout-backup-${new Date().toISOString().slice(0, 10)}.json`, await exportBackup())
+    await saveTextFile(`workout-backup-${new Date().toISOString().slice(0, 10)}.json`, await exportBackup())
   }
 
   const doImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,7 +208,7 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
         <Card className="stack">
           <Stepper label="セット間の休憩" value={initial.defaultRestSec} onChange={(defaultRestSec) => void updateSettings({ defaultRestSec })} step={REST_STEP} min={REST_MIN} max={REST_MAX} unit="秒" />
           <Toggle checked={initial.sound} onChange={(sound) => void updateSettings({ sound })} label="終了音" description="残り3秒からカウントダウン音も鳴ります" />
-          <Toggle checked={initial.vibration} onChange={(vibration) => void updateSettings({ vibration })} label="バイブレーション" description="対応端末のみ" />
+          {VIBRATION_SUPPORTED && <Toggle checked={initial.vibration} onChange={(vibration) => void updateSettings({ vibration })} label="バイブレーション" />}
         </Card>
       </Section>
 

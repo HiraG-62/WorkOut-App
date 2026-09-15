@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
-import { addFood, archiveFood, updateFood } from '../../db/repo'
+import { addFood, archiveFood, unarchiveFood, updateFood } from '../../db/repo'
+import { useToast } from '../../components/ui/Toast'
 import { pfcToKcal } from '../../lib/nutrition'
 import { Sheet } from '../../components/ui/Sheet'
 import { TextField } from '../../components/ui/Field'
@@ -8,13 +9,14 @@ import { Button } from '../../components/ui/Button'
 import type { Food } from '../../types'
 import './FoodFormSheet.css'
 
+const DEFAULT_UNIT = '1食'
+const UNDO_MS = 6000
+
 interface FoodFormSheetProps {
   open: boolean
   onClose: () => void
   /** 編集対象。未指定なら新規作成 */
   food?: Food | null
-  /** AI推定などからの初期値 */
-  initial?: Partial<Pick<Food, 'name' | 'unitLabel' | 'kcal' | 'protein' | 'fat' | 'carbs'>>
   onSaved?: (food: Food) => void
 }
 
@@ -27,34 +29,34 @@ interface Draft {
   carbs: string
 }
 
-const EMPTY: Draft = { name: '', unitLabel: '1食', kcal: '', protein: '', fat: '', carbs: '' }
+const EMPTY: Draft = { name: '', unitLabel: DEFAULT_UNIT, kcal: '', protein: '', fat: '', carbs: '' }
 
 function num(s: string): number {
   const n = Number(s)
   return Number.isFinite(n) && n >= 0 ? n : 0
 }
 
-export function FoodFormSheet({ open, onClose, food, initial, onSaved }: FoodFormSheetProps) {
+export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetProps) {
+  const toast = useToast()
   const [d, setD] = useState<Draft>(EMPTY)
   const [error, setError] = useState('')
 
   useEffect(() => {
     if (!open) return
-    const src = food ?? initial
     setD(
-      src
+      food
         ? {
-            name: src.name ?? '',
-            unitLabel: src.unitLabel ?? '1食',
-            kcal: src.kcal !== undefined ? String(src.kcal) : '',
-            protein: src.protein !== undefined ? String(src.protein) : '',
-            fat: src.fat !== undefined ? String(src.fat) : '',
-            carbs: src.carbs !== undefined ? String(src.carbs) : '',
+            name: food.name,
+            unitLabel: food.unitLabel,
+            kcal: String(food.kcal),
+            protein: String(food.protein),
+            fat: String(food.fat),
+            carbs: String(food.carbs),
           }
         : EMPTY,
     )
     setError('')
-  }, [open, food, initial])
+  }, [open, food])
 
   const set = (k: keyof Draft) => (e: React.ChangeEvent<HTMLInputElement>) => setD((s) => ({ ...s, [k]: e.target.value }))
 
@@ -69,7 +71,7 @@ export function FoodFormSheet({ open, onClose, food, initial, onSaved }: FoodFor
     const kcal = d.kcal.trim() === '' ? pfcToKcal(num(d.protein), num(d.fat), num(d.carbs)) : num(d.kcal)
     const payload = {
       name: d.name.trim(),
-      unitLabel: d.unitLabel.trim() || '1食',
+      unitLabel: d.unitLabel.trim() || DEFAULT_UNIT,
       kcal: Math.round(kcal),
       protein: num(d.protein),
       fat: num(d.fat),
@@ -99,6 +101,7 @@ export function FoodFormSheet({ open, onClose, food, initial, onSaved }: FoodFor
               aria-label="このフードを削除"
               onClick={() => {
                 void archiveFood(food.id)
+                toast.show(`${food.name} を削除しました`, 'info', { label: '取り消す', onClick: () => void unarchiveFood(food.id) }, UNDO_MS)
                 onClose()
               }}
             />

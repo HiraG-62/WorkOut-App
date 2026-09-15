@@ -10,9 +10,11 @@ interface RingProps {
   label?: string
   sub?: string
   className?: string
+  /** 読み上げ用の説明。未指定なら値/目標から作る */
+  ariaLabel?: string
 }
 
-export function Ring({ value, target, size = 120, stroke = 10, color, label, sub, className = '' }: RingProps) {
+export function Ring({ value, target, size = 120, stroke = 10, color, label, sub, className = '', ariaLabel }: RingProps) {
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
   const ratio = target > 0 ? Math.min(1, value / target) : 0
@@ -20,7 +22,7 @@ export function Ring({ value, target, size = 120, stroke = 10, color, label, sub
   const offset = c * (1 - ratio)
   return (
     <div className={`ring ${className}`} style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${label ?? ''} ${Math.round(ratio * 100)}%`}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={ariaLabel ?? `${Math.round(value)} / ${target}（${Math.round(ratio * 100)}%）`}>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={stroke} />
         <circle
           cx={size / 2}

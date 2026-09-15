@@ -30,8 +30,11 @@ export function HomePage() {
   const { foods } = useFoods()
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(5).toArray(), [])
   const exerciseList = useLiveQuery(() => db.exercises.toArray(), [])
-  const todayWorkout = workouts?.find((w) => w.date === today)
-  const lastWorkout = workouts?.find((w) => w.date !== today)
+  const settingsRow = useLiveQuery(async () => (await db.settings.get('app')) ?? null, [])
+  // 日をまたいだ進行中のワークアウトも「今日の」扱いにする
+  const todayWorkout = workouts?.find((w) => !w.endedAt) ?? workouts?.find((w) => w.date === today)
+  const lastWorkout = workouts?.find((w) => w.id !== todayWorkout?.id)
+  const ready = workouts !== undefined && exerciseList !== undefined
   const todaySets = useLiveQuery(async () => (todayWorkout ? db.sets.where('workoutId').equals(todayWorkout.id).toArray() : []), [todayWorkout?.id])
   const [photoOpen, setPhotoOpen] = useState(false)
   const [quickOpen, setQuickOpen] = useState(false)
@@ -56,7 +59,7 @@ export function HomePage() {
         </button>
       </header>
 
-      {!settings.onboarded && (
+      {settingsRow && !settingsRow.onboarded && (
         <Card accent className="hp__welcome">
           <Sparkles size={20} className="hp__welcome-icon" aria-hidden />
           <div className="grow">
@@ -77,7 +80,7 @@ export function HomePage() {
       <WeightQuick compact />
 
       <Section title="トレーニング">
-        {workouts === undefined ? (
+        {!ready ? (
           <div className="skeleton skeleton--row" aria-busy="true" />
         ) : todayWorkout ? (
           <button type="button" className="hp__workout hp__workout--active" onClick={() => navigate(`/workout/${todayWorkout.id}`)}>

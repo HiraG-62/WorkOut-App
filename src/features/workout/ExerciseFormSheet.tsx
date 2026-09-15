@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
-import { addExercise, archiveExercise, updateExercise } from '../../db/repo'
+import { addExercise, archiveExercise, unarchiveExercise, updateExercise } from '../../db/repo'
+import { useToast } from '../../components/ui/Toast'
 import { Sheet } from '../../components/ui/Sheet'
 import { Segmented, SelectField, TextField } from '../../components/ui/Field'
 import { Toggle } from '../../components/ui/Toggle'
@@ -24,9 +25,12 @@ interface Draft {
   progressionId: string
 }
 
+const UNDO_MS = 6000
+
 const EMPTY: Draft = { name: '', type: 'reps', bodyPart: 'chest', useWeight: false, restSec: '', progressionId: '' }
 
 export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSaved }: ExerciseFormSheetProps) {
+  const toast = useToast()
   const [d, setD] = useState<Draft>(EMPTY)
   const [error, setError] = useState('')
 
@@ -89,6 +93,7 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
               aria-label="この種目を削除"
               onClick={() => {
                 void archiveExercise(exercise.id)
+                toast.show(`${exercise.name} を削除しました`, 'info', { label: '取り消す', onClick: () => void unarchiveExercise(exercise.id) }, UNDO_MS)
                 onClose()
               }}
             />

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { ChevronLeft } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import './PageHeader.css'
 
 interface PageHeaderProps {
@@ -8,14 +8,19 @@ interface PageHeaderProps {
   eyebrow?: string
   action?: ReactNode
   back?: boolean
+  /** 履歴が無いときの戻り先 */
+  backTo?: string
 }
 
-export function PageHeader({ title, eyebrow, action, back = false }: PageHeaderProps) {
+export function PageHeader({ title, eyebrow, action, back = false, backTo = '/' }: PageHeaderProps) {
   const navigate = useNavigate()
+  const location = useLocation()
+  // 直リンクやリロードで履歴が無いときは backTo に戻る
+  const goBack = () => (location.key === 'default' ? navigate(backTo, { replace: true }) : navigate(-1))
   return (
     <header className="page-header">
       {back && (
-        <button type="button" className="page-header__back" onClick={() => navigate(-1)} aria-label="戻る">
+        <button type="button" className="page-header__back" onClick={goBack} aria-label="戻る">
           <ChevronLeft size={24} aria-hidden />
         </button>
       )}

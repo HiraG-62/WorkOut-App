@@ -13,7 +13,7 @@ export function foodScore(food: Food, slot: number, now: number): number {
   return food.slotCounts[slot] * SLOT_WEIGHT + food.useCount + recent
 }
 
-export function useFoods(): { foods: Food[]; loaded: boolean } {
+export function useFoods(): { foods: Food[] } {
   // クエリ実行時点の時刻と時間帯で並べ替える（描画中に Date.now を呼ばない）
   const result = useLiveQuery(async () => {
     const all = await db.foods.filter((f) => !f.archived).toArray()
@@ -24,5 +24,5 @@ export function useFoods(): { foods: Food[]; loaded: boolean } {
     const { all, now, slot } = result
     return [...all].sort((a, b) => foodScore(b, slot, now) - foodScore(a, slot, now) || a.name.localeCompare(b.name, 'ja'))
   }, [result])
-  return { foods, loaded: result !== undefined }
+  return { foods }
 }

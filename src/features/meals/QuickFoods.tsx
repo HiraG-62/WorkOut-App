@@ -1,9 +1,11 @@
 import { Plus } from 'lucide-react'
-import { logFood, deleteMeal } from '../../db/repo'
+import { logFood, unlogFood } from '../../db/repo'
 import { tapHaptic } from '../../lib/feedback'
 import { useToast } from '../../components/ui/Toast'
 import type { Food } from '../../types'
 import './QuickFoods.css'
+
+const UNDO_MS = 5000
 
 interface QuickFoodsProps {
   foods: Food[]
@@ -21,10 +23,7 @@ export function QuickFoods({ foods, date, limit, onMore, onAdd }: QuickFoodsProp
   const handleTap = async (food: Food) => {
     tapHaptic()
     const entry = await logFood(food, 1, date)
-    toast.show(`${food.name} を記録`, 'success', {
-      label: '取り消す',
-      onClick: () => void deleteMeal(entry.id),
-    })
+    toast.show(`${food.name} を記録`, 'success', { label: '取り消す', onClick: () => void unlogFood(entry) }, UNDO_MS)
   }
 
   return (

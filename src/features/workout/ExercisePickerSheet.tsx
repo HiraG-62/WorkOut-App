@@ -77,9 +77,9 @@ export function ExercisePickerSheet({ open, onClose, exercises, selectedIds, rec
           <Search size={18} aria-hidden />
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="種目を検索" aria-label="種目を検索" />
         </div>
-        <div className="ep__filters" role="tablist" aria-label="部位で絞り込む">
+        <div className="ep__filters" role="group" aria-label="部位で絞り込む">
           {filters.map((f) => (
-            <button key={f.value} type="button" role="tab" aria-selected={filter === f.value} className={`ep__filter ${filter === f.value ? 'ep__filter--on' : ''}`} onClick={() => setChosen(f.value)}>
+            <button key={f.value} type="button" aria-pressed={filter === f.value} className={`ep__filter ${filter === f.value ? 'ep__filter--on' : ''}`} onClick={() => setChosen(f.value)}>
               {f.label}
             </button>
           ))}

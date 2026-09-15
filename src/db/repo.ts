@@ -1,16 +1,7 @@
 import { db, DEFAULT_SETTINGS } from './db'
 import { newId } from '../lib/id'
 import { fromDateKey, timeSlot, todayKey } from '../lib/date'
-import type {
-  Exercise,
-  Food,
-  MealEntry,
-  MealSet,
-  Settings,
-  WeightEntry,
-  Workout,
-  WorkoutSet,
-} from '../types'
+import type { Exercise, Food, MealEntry, MealSet, Settings, WeightEntry, Workout, WorkoutSet } from '../types'
 
 // ---------- Settings ----------
 
@@ -19,8 +10,9 @@ export async function getSettings(): Promise<Settings> {
 }
 
 export async function updateSettings(patch: Partial<Omit<Settings, 'id'>>): Promise<void> {
-  const current = await getSettings()
-  await db.settings.put({ ...current, ...patch, id: 'app' })
+  // 部分更新にして、フォーム保存とタイマー設定の同時更新で後勝ちにならないようにする
+  const updated = await db.settings.update('app', patch)
+  if (updated === 0) await db.settings.put({ ...DEFAULT_SETTINGS, ...patch, id: 'app' })
 }
 
 // ---------- Exercises ----------
@@ -47,17 +39,11 @@ export async function archiveExercise(id: string): Promise<void> {
   await db.exercises.update(id, { archived: true })
 }
 
+export async function unarchiveExercise(id: string): Promise<void> {
+  await db.exercises.update(id, { archived: false })
+}
+
 // ---------- Workouts ----------
-
-export async function getTodayWorkout(): Promise<Workout | undefined> {
-  return db.workouts.where('date').equals(todayKey()).first()
-}
-
-/** 直近の（今日以外の）完了済みワークアウト */
-export async function getLastWorkout(excludeId?: string): Promise<Workout | undefined> {
-  const list = await db.workouts.orderBy('startedAt').reverse().limit(5).toArray()
-  return list.find((w) => w.id !== excludeId)
-}
 
 export async function createWorkout(exerciseIds: string[]): Promise<Workout> {
   const w: Workout = {
@@ -185,6 +171,10 @@ export async function archiveFood(id: string): Promise<void> {
   await db.foods.update(id, { archived: true })
 }
 
+export async function unarchiveFood(id: string): Promise<void> {
+  await db.foods.update(id, { archived: false })
+}
+
 function scaled(food: Pick<Food, 'kcal' | 'protein' | 'fat' | 'carbs'>, q: number) {
   const r1 = (n: number) => Math.round(n * q * 10) / 10
   return {
@@ -235,14 +225,30 @@ export async function logQuickMeal(
 }
 
 export async function updateMealQuantity(entry: MealEntry, quantity: number): Promise<void> {
+  // フードから記録したものは元の単位値から再計算し、丸め誤差を溜めない
+  const food = entry.foodId ? await db.foods.get(entry.foodId) : undefined
   const base = entry.quantity > 0 ? entry.quantity : 1
-  const per = {
+  const per = food ?? {
     kcal: entry.kcal / base,
     protein: entry.protein / base,
     fat: entry.fat / base,
     carbs: entry.carbs / base,
   }
   await db.meals.update(entry.id, { quantity, ...scaled(per, quantity) })
+}
+
+/** logFood の取り消し。使用回数などの統計も戻す */
+export async function unlogFood(entry: MealEntry): Promise<void> {
+  await db.transaction('rw', db.meals, db.foods, async () => {
+    await db.meals.delete(entry.id)
+    if (!entry.foodId) return
+    const food = await db.foods.get(entry.foodId)
+    if (!food) return
+    const slot = timeSlot(new Date(entry.createdAt))
+    const slotCounts: Food['slotCounts'] = [...food.slotCounts]
+    slotCounts[slot] = Math.max(0, slotCounts[slot] - 1)
+    await db.foods.update(food.id, { useCount: Math.max(0, food.useCount - 1), slotCounts })
+  })
 }
 
 export async function deleteMeal(id: string): Promise<void> {
@@ -276,15 +282,19 @@ export async function deleteMealSet(id: string): Promise<void> {
   await db.mealSets.delete(id)
 }
 
-export async function logMealSet(set: MealSet, date = todayKey()): Promise<number> {
-  let count = 0
+export async function logMealSet(set: MealSet, date = todayKey()): Promise<{ logged: number; skipped: number }> {
+  let logged = 0
+  let skipped = 0
   for (const item of set.items) {
     const food = await db.foods.get(item.foodId)
-    if (!food || food.archived) continue
+    if (!food || food.archived) {
+      skipped += 1
+      continue
+    }
     await logFood(food, item.quantity, date)
-    count += 1
+    logged += 1
   }
-  return count
+  return { logged, skipped }
 }
 
 // ---------- Weights ----------

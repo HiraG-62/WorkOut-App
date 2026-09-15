@@ -6,7 +6,6 @@ import type { MealEntry, Targets } from '../../types'
 interface DayMeals {
   entries: MealEntry[]
   totals: Targets
-  loaded: boolean
 }
 
 export function useDayMeals(date: string): DayMeals {
@@ -14,6 +13,5 @@ export function useDayMeals(date: string): DayMeals {
   return {
     entries: entries ?? [],
     totals: sumNutrition(entries ?? []),
-    loaded: entries !== undefined,
   }
 }

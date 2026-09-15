@@ -117,7 +117,7 @@ export function LineChart({
         <path d={model.path(points.map((p) => p.y))} className="chart__line" style={{ stroke: color }} />
         {points.map((p, i) =>
           p.y === null ? null : (
-            <circle key={p.x} cx={model.xAt(i)} cy={model.yAt(p.y)} r={i === model.lastIdx ? 4 : 2.2} style={{ fill: color }} />
+            <circle key={`${p.x}-${i}`} cx={model.xAt(i)} cy={model.yAt(p.y)} r={i === model.lastIdx ? 4 : 2.2} style={{ fill: color }} />
           ),
         )}
         {model.last && model.last.y !== null && (

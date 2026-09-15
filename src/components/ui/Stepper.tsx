@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Minus, Plus } from 'lucide-react'
 import { tapHaptic } from '../../lib/feedback'
 import './Stepper.css'
@@ -63,21 +63,32 @@ export function Stepper({
     }
   }
 
-  const clearHold = () => {
+  const clearHold = useCallback(function clearHoldFn() {
     if (holdTimer.current) window.clearTimeout(holdTimer.current)
     if (holdInterval.current) window.clearInterval(holdInterval.current)
     holdTimer.current = null
     holdInterval.current = null
-  }
+    window.removeEventListener('pointerup', clearHoldFn)
+    window.removeEventListener('pointercancel', clearHoldFn)
+  }, [])
 
   const startHold = (delta: number) => {
+    clearHold()
     apply(delta)
+    // ボタンが disabled になると pointerup が届かないため window 側でも解除する
+    window.addEventListener('pointerup', clearHold)
+    window.addEventListener('pointercancel', clearHold)
     holdTimer.current = window.setTimeout(() => {
       holdInterval.current = window.setInterval(() => apply(delta), HOLD_REPEAT_MS)
     }, HOLD_DELAY_MS)
   }
 
-  useEffect(() => clearHold, [])
+  useEffect(() => clearHold, [clearHold])
+
+  // 上限・下限に達したら長押しを止める
+  useEffect(() => {
+    if (value <= min || value >= max) clearHold()
+  }, [value, min, max, clearHold])
 
   useEffect(() => {
     if (editing) inputRef.current?.select()

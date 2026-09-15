@@ -6,10 +6,10 @@ export const FoodEstimateSchema = z.object({
     z.object({
       name: z.string().describe('料理名（日本語）'),
       amount: z.string().describe('推定量。例: 1皿, 約150g, 1杯'),
-      kcal: z.number().describe('推定カロリー kcal'),
-      protein: z.number().describe('タンパク質 g'),
-      fat: z.number().describe('脂質 g'),
-      carbs: z.number().describe('炭水化物 g'),
+      kcal: z.number().min(0).describe('推定カロリー kcal'),
+      protein: z.number().min(0).describe('タンパク質 g'),
+      fat: z.number().min(0).describe('脂質 g'),
+      carbs: z.number().min(0).describe('炭水化物 g'),
     }),
   ),
   confidence: z.enum(['low', 'medium', 'high']),
@@ -17,10 +17,10 @@ export const FoodEstimateSchema = z.object({
 })
 
 export const TargetSuggestionSchema = z.object({
-  kcal: z.number(),
-  protein: z.number(),
-  fat: z.number(),
-  carbs: z.number(),
+  kcal: z.number().min(0),
+  protein: z.number().min(0),
+  fat: z.number().min(0),
+  carbs: z.number().min(0),
   rationale: z.string().describe('なぜこの値かを初心者向けに3〜5文で（日本語）'),
 })
 

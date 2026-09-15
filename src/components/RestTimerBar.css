@@ -53,7 +53,7 @@
 }
 
 .rest-bar__btn {
-  min-height: 40px;
+  min-height: var(--tap);
   padding: 0 var(--s-3);
   border-radius: var(--r-sm);
   background: var(--surface-2);
@@ -67,7 +67,7 @@
 }
 
 .rest-bar__btn--skip {
-  width: 40px;
+  width: var(--tap);
   padding: 0;
   justify-content: center;
   color: var(--text-2);

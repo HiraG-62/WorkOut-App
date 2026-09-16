@@ -25,10 +25,18 @@
 }
 
 .btn--sm {
-  min-height: 36px;
+  min-height: 40px;
   padding: 0 var(--s-3);
   font-size: 14px;
   border-radius: var(--r-sm);
+  position: relative;
+}
+
+/* 見た目は 40px のまま、当たり判定を 44px 以上に広げる */
+.btn--sm::before {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 .btn--md {
@@ -50,7 +58,7 @@
 }
 
 .btn--icon-only.btn--sm {
-  width: 36px;
+  width: 40px;
   padding: 0;
 }
 

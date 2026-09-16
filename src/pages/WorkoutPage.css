@@ -69,7 +69,7 @@
   background: var(--accent);
   border-color: var(--accent);
   color: var(--on-accent);
-  box-shadow: 0 8px 24px var(--accent-glow);
+  box-shadow: 0 6px 18px rgba(200, 245, 66, 0.16);
 }
 
 .wp__start-icon {

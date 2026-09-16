@@ -36,6 +36,8 @@ interface ExerciseBlockProps {
   readOnly: boolean
   /** 今取り組んでいる種目として ✓ を強調表示する */
   active: boolean
+  /** 一括記録の実行中など、入力を一時的に止める */
+  locked?: boolean
 }
 
 interface Draft {
@@ -46,7 +48,7 @@ interface Draft {
 
 type PlannedSet = Pick<WorkoutSet, 'reps' | 'seconds' | 'weightKg'>
 
-export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefault, readOnly, active }: ExerciseBlockProps) {
+export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefault, readOnly, active, locked = false }: ExerciseBlockProps) {
   const timer = useRestTimer()
   const toast = useToast()
   const guard = useBusy()
@@ -77,8 +79,9 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
     const src = lastSets[done] ?? lastSets[lastSets.length - 1] ?? sets[sets.length - 1]
     setDraft({
       reps: src?.reps ?? DEFAULT_REPS,
-      seconds: src?.seconds ?? DEFAULT_SECONDS,
-      weightKg: src?.weightKg ?? (exercise.useWeight ? DEFAULT_WEIGHT : 0),
+      seconds: Math.max(SECONDS_STEP, src?.seconds ?? DEFAULT_SECONDS),
+      // 前回があればその値（自重なら 0）、初めてなら既定の加重
+      weightKg: src ? (src.weightKg ?? 0) : exercise.useWeight ? DEFAULT_WEIGHT : 0,
     })
   }, [lastSets, done, sets, exercise.id, exercise.useWeight])
 
@@ -204,7 +207,7 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
         {!readOnly &&
           remainingPlanned.map((s, i) => (
             <li key={`p${i}`}>
-              <button type="button" className="xb__set xb__set--ghost" onClick={() => void completePlanned(s)} aria-label={`セット${done + i + 1}を前回と同じ ${formatSet(s, exercise)} で記録`}>
+              <button type="button" className="xb__set xb__set--ghost" onClick={() => void completePlanned(s)} disabled={locked} aria-label={`セット${done + i + 1}を前回と同じ ${formatSet(s, exercise)} で記録`}>
                 <span className="xb__set-no">{done + i + 1}</span>
                 <span className="display xb__set-val">{formatSet(s, exercise)}</span>
                 <span className="xb__set-hint">タップで記録</span>
@@ -242,7 +245,7 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
               )}
               {exercise.useWeight && <Stepper value={draft.weightKg} onChange={(weightKg) => setDraft({ ...draft, weightKg })} step={WEIGHT_STEP} min={0} max={MAX_WEIGHT} decimals={1} unit="kg" name={`${exercise.name}の加重`} />}
             </div>
-            <button type="button" className={doneClass} onClick={() => void complete(draft)} aria-label={`${exercise.name} セット${done + 1}を完了`}>
+            <button type="button" className={doneClass} onClick={() => void complete(draft)} disabled={locked} aria-label={`${exercise.name} セット${done + 1}を完了`}>
               <Check size={30} strokeWidth={3} aria-hidden />
             </button>
           </div>
@@ -272,7 +275,7 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
       <Sheet
         open={editing !== null}
         onClose={() => setEditing(null)}
-        title={`セット ${editing ? sets.indexOf(editing) + 1 : ''} を編集`}
+        title={`セット ${editing ? sets.findIndex((s) => s.id === editing.id) + 1 : ''} を編集`}
         footer={
           <div className="row">
             <Button

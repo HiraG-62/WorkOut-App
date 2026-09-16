@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react'
 import './Toast.css'
 
@@ -54,26 +55,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="toast-stack" aria-live="polite">
-        {item && Icon && (
-          <div key={item.id} className={`toast toast--${item.kind}`} role="status" onClick={item.action ? undefined : dismiss}>
-            <Icon size={18} aria-hidden />
-            <span className="toast__msg">{item.message}</span>
-            {item.action && (
-              <button
-                type="button"
-                className="toast__action"
-                onClick={() => {
-                  item.action?.onClick()
-                  dismiss()
-                }}
-              >
-                {item.action.label}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      {createPortal(
+        <div className="toast-stack" aria-live="polite">
+          {item && Icon && (
+            <div key={item.id} className={`toast toast--${item.kind}`} role="status" onClick={item.action ? undefined : dismiss}>
+              <Icon size={18} aria-hidden />
+              <span className="toast__msg">{item.message}</span>
+              {item.action && (
+                <button
+                  type="button"
+                  className="toast__action"
+                  onClick={() => {
+                    item.action?.onClick()
+                    dismiss()
+                  }}
+                >
+                  {item.action.label}
+                </button>
+              )}
+            </div>
+          )}
+        </div>,
+        document.body,
+      )}
     </ToastContext.Provider>
   )
 }

@@ -3,7 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Scale } from 'lucide-react'
 import { db } from '../../db/db'
 import { upsertWeight } from '../../db/repo'
-import { todayKey, formatRelative } from '../../lib/date'
+import { formatRelative } from '../../lib/date'
+import { useToday } from '../../hooks/useToday'
 import { Stepper } from '../../components/ui/Stepper'
 import { Card } from '../../components/ui/Card'
 import './WeightQuick.css'
@@ -20,7 +21,7 @@ interface WeightQuickProps {
 
 /** 前回の体重がプリセットされた ± 入力。変更すると自動で今日の記録として保存する */
 export function WeightQuick({ compact = false }: WeightQuickProps) {
-  const today = todayKey()
+  const today = useToday()
   const latest = useLiveQuery(async () => (await db.weights.orderBy('date').reverse().first()) ?? null, [])
   const todayEntry = useLiveQuery(() => db.weights.where('date').equals(today).first(), [today])
   const [draft, setDraft] = useState<number | null>(null)
@@ -35,7 +36,7 @@ export function WeightQuick({ compact = false }: WeightQuickProps) {
     if (draft === null) return
     if (timer.current) window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => {
-      void upsertWeight(draft).then(() => {
+      void upsertWeight(draft, today).then(() => {
         setSaved(true)
         // 保存中にさらに操作していたら、その値を残す
         setDraft((cur) => (cur === draft ? null : cur))
@@ -44,7 +45,7 @@ export function WeightQuick({ compact = false }: WeightQuickProps) {
     return () => {
       if (timer.current) window.clearTimeout(timer.current)
     }
-  }, [draft])
+  }, [draft, today])
 
   useEffect(() => {
     if (!saved) return

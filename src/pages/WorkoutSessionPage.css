@@ -41,7 +41,12 @@
   transition: background-color var(--dur-fast), color var(--dur-fast);
 }
 
-.ws__all:active {
+.ws__all:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.ws__all:active:not(:disabled) {
   background: var(--accent);
   color: var(--on-accent);
 }

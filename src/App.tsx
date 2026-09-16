@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { HashRouter, Route, Routes, Outlet } from 'react-router-dom'
 import { BottomNav } from './components/BottomNav'
 import { RestTimerBar } from './components/RestTimerBar'
@@ -15,6 +16,11 @@ import { useRestTimer } from './hooks/useRestTimer'
 
 function Shell() {
   const timer = useRestTimer()
+  // body 直下に描画するトーストがタイマーの上に乗るよう、状態を body に伝える
+  useEffect(() => {
+    document.body.classList.toggle('has-timer', timer.running)
+    return () => document.body.classList.remove('has-timer')
+  }, [timer.running])
   return (
     <div className={`shell ${timer.running ? 'shell--timer' : ''}`}>
       <ErrorBoundary>

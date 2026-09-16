@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react'
 import { logFood, unlogFood } from '../../db/repo'
 import { tapHaptic } from '../../lib/feedback'
 import { useToast } from '../../components/ui/Toast'
+import { useBusy } from '../../hooks/useBusy'
 import type { Food } from '../../types'
 import './QuickFoods.css'
 
@@ -18,13 +19,15 @@ interface QuickFoodsProps {
 /** ワンタップで記録できるフードのチップ一覧 */
 export function QuickFoods({ foods, date, limit, onMore, onAdd }: QuickFoodsProps) {
   const toast = useToast()
+  const guard = useBusy()
   const shown = limit ? foods.slice(0, limit) : foods
 
-  const handleTap = async (food: Food) => {
-    tapHaptic()
-    const entry = await logFood(food, 1, date)
-    toast.show(`${food.name} を記録`, 'success', { label: '取り消す', onClick: () => void unlogFood(entry) }, UNDO_MS)
-  }
+  const handleTap = (food: Food) =>
+    guard(async () => {
+      tapHaptic()
+      const entry = await logFood(food, 1, date)
+      toast.show(`${food.name} を記録`, 'success', { label: '取り消す', onClick: () => void unlogFood(entry) }, UNDO_MS)
+    })
 
   return (
     <div className="qf">

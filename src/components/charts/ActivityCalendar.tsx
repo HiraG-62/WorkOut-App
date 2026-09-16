@@ -24,7 +24,12 @@ export function ActivityCalendar({ workoutDays, mealDays }: ActivityCalendarProp
   const monthLabels = weeks.map((week, i) => {
     const first = fromDateKey(week[0])
     const prev = i > 0 ? fromDateKey(weeks[i - 1][0]) : null
-    return !prev || prev.getMonth() !== first.getMonth() ? `${first.getMonth() + 1}月` : ''
+    const isMonthStart = !prev || prev.getMonth() !== first.getMonth()
+    if (!isMonthStart) return ''
+    // 次の月ラベルが 2 列以内に来るなら省略して重なりを避ける
+    const next = weeks[i + 1] ? fromDateKey(weeks[i + 1][0]) : null
+    if (i === 0 && next && next.getMonth() !== first.getMonth()) return ''
+    return `${first.getMonth() + 1}月`
   })
 
   return (

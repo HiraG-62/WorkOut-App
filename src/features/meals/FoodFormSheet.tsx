@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { addFood, archiveFood, unarchiveFood, updateFood } from '../../db/repo'
 import { useToast } from '../../components/ui/Toast'
+import { useBusy } from '../../hooks/useBusy'
 import { pfcToKcal } from '../../lib/nutrition'
 import { Sheet } from '../../components/ui/Sheet'
 import { TextField } from '../../components/ui/Field'
@@ -38,6 +39,7 @@ function num(s: string): number {
 
 export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetProps) {
   const toast = useToast()
+  const guard = useBusy()
   const [d, setD] = useState<Draft>(EMPTY)
   const [error, setError] = useState('')
 
@@ -62,11 +64,12 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
 
   const fillKcal = () => setD((s) => ({ ...s, kcal: String(pfcToKcal(num(s.protein), num(s.fat), num(s.carbs))) }))
 
-  const save = async () => {
-    if (!d.name.trim()) {
-      setError('名前を入力してください')
-      return
-    }
+  const save = () =>
+    guard(async () => {
+      if (!d.name.trim()) {
+        setError('名前を入力してください')
+        return
+      }
     // カロリー未入力なら PFC から補完する
     const kcal = d.kcal.trim() === '' ? pfcToKcal(num(d.protein), num(d.fat), num(d.carbs)) : num(d.kcal)
     const payload = {
@@ -77,15 +80,15 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
       fat: num(d.fat),
       carbs: num(d.carbs),
     }
-    if (food) {
-      await updateFood(food.id, payload)
-      onSaved?.({ ...food, ...payload })
-    } else {
-      const created = await addFood(payload)
-      onSaved?.(created)
-    }
-    onClose()
-  }
+      if (food) {
+        await updateFood(food.id, payload)
+        onSaved?.({ ...food, ...payload })
+      } else {
+        const created = await addFood(payload)
+        onSaved?.(created)
+      }
+      onClose()
+    })
 
   return (
     <Sheet

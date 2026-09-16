@@ -4,7 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { CheckCheck, CopyCheck, Dumbbell, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { db } from '../db/db'
 import { addSet, deleteWorkout, finishWorkout, getLastSetsForExercise, reopenWorkout, setWorkoutExercises } from '../db/repo'
-import { formatDuration, formatLong, todayKey } from '../lib/date'
+import { formatDuration, formatLong } from '../lib/date'
+import { useToday } from '../hooks/useToday'
 import { tapHaptic } from '../lib/feedback'
 import { useSettings } from '../hooks/useSettings'
 import { useRestTimer } from '../hooks/useRestTimer'
@@ -31,6 +32,8 @@ export function WorkoutSessionPage() {
   const timer = useRestTimer()
   const toast = useToast()
   const guard = useBusy()
+  const today = useToday()
+  const [bulkRunning, setBulkRunning] = useState(false)
   const workout = useLiveQuery(async () => (await db.workouts.get(id)) ?? null, [id])
   const sets = useLiveQuery(() => db.sets.where('workoutId').equals(id).sortBy('order'), [id])
   const exerciseList = useLiveQuery(() => db.exercises.toArray(), [])
@@ -74,7 +77,7 @@ export function WorkoutSessionPage() {
   }
 
   const exerciseIds = workout.exerciseIds
-  const isToday = workout.date === todayKey()
+  const isToday = workout.date === today
   const readOnly = !!workout.endedAt
   const elapsed = (workout.endedAt ?? now) - workout.startedAt
   const totalSets = sets.length
@@ -104,18 +107,23 @@ export function WorkoutSessionPage() {
 
   const completeAllRemaining = () =>
     guard(async () => {
-      for (const { exId, s } of remainingAll) {
-        const ex = exercises.get(exId)
-        await addSet({
-          workoutId: workout.id,
-          exerciseId: exId,
-          reps: ex?.type === 'time' ? undefined : s.reps,
-          seconds: ex?.type === 'time' ? s.seconds : undefined,
-          weightKg: ex?.useWeight ? s.weightKg : undefined,
-        })
+      setBulkRunning(true)
+      try {
+        for (const { exId, s } of remainingAll) {
+          const ex = exercises.get(exId)
+          await addSet({
+            workoutId: workout.id,
+            exerciseId: exId,
+            reps: ex?.type === 'time' ? undefined : s.reps,
+            seconds: ex?.type === 'time' ? s.seconds : undefined,
+            weightKg: ex?.useWeight ? s.weightKg : undefined,
+          })
+        }
+        tapHaptic()
+        toast.show(`${remainingAll.length}セットを前回と同じで記録しました`, 'success')
+      } finally {
+        setBulkRunning(false)
       }
-      tapHaptic()
-      toast.show(`${remainingAll.length}セットを前回と同じで記録しました`, 'success')
     })
 
   const addExercises = async (ids: string[]) => {
@@ -135,7 +143,7 @@ export function WorkoutSessionPage() {
               再開
             </Button>
           ) : (
-            <Button variant="primary" icon={<CheckCheck size={16} aria-hidden />} onClick={() => void finish()}>
+            <Button variant={totalSets > 0 ? 'accent-soft' : 'secondary'} icon={<CheckCheck size={16} aria-hidden />} onClick={() => void finish()}>
               終了
             </Button>
           )
@@ -157,7 +165,7 @@ export function WorkoutSessionPage() {
       </div>
 
       {!readOnly && remainingAll.length >= MIN_REMAINING_FOR_BULK && (
-        <button type="button" className="ws__all" onClick={() => void completeAllRemaining()}>
+        <button type="button" className="ws__all" onClick={() => void completeAllRemaining()} disabled={bulkRunning} aria-busy={bulkRunning}>
           <CopyCheck size={18} aria-hidden />
           前回と同じで一括記録（残り{remainingAll.length}セット）
         </button>
@@ -177,6 +185,7 @@ export function WorkoutSessionPage() {
               restSecDefault={settings.defaultRestSec}
               readOnly={readOnly}
               active={exId === activeId}
+              locked={bulkRunning}
             />
           )
         })}

@@ -44,16 +44,17 @@ export function MealSetsSheet({ open, onClose, date, todayEntries }: MealSetsShe
   const sourceItems = todayEntries.filter((e) => e.foodId)
   const dayLabel = formatRelative(date)
 
-  const create = async () => {
-    if (!name.trim() || sourceItems.length === 0) return
-    await addMealSet(
-      name.trim(),
-      sourceItems.map((e) => ({ foodId: e.foodId as string, quantity: e.quantity })),
-    )
-    setName('')
-    setCreating(false)
-    toast.show('セットを作成しました', 'success')
-  }
+  const create = () =>
+    guard(async () => {
+      if (!name.trim() || sourceItems.length === 0) return
+      await addMealSet(
+        name.trim(),
+        sourceItems.map((e) => ({ foodId: e.foodId as string, quantity: e.quantity })),
+      )
+      setName('')
+      setCreating(false)
+      toast.show('セットを作成しました', 'success')
+    })
 
   const apply = (id: string) =>
     guard(async () => {

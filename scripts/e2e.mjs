@@ -160,7 +160,7 @@ try {
   await clickText('食事', { tag: 'a' })
   await sleep(400)
   await shot('meals-empty')
-  await clickText('フードを登録する')
+  await clickText('フード登録')
   await sleep(300)
   await typeInto('.sheet input[placeholder*="鶏むね肉"]', '鶏むね肉 100g')
   await typeInto('.sheet input[placeholder="0"]', '110')
@@ -176,6 +176,19 @@ try {
   await shot('meals-logged')
   const entryCount = await page.$$eval('.mel__row', (els) => els.length)
   assert(entryCount === 1, `食事が1件記録された (${entryCount})`)
+
+  // シート表示中でもトーストの「取り消す」が押せる（inert の巻き込み防止）
+  await clickText('登録済み')
+  await sleep(300)
+  await clickText('鶏むね肉 100g', { index: 0 })
+  await sleep(300)
+  await shot('picker-with-toast')
+  await clickText('取り消す')
+  await sleep(300)
+  await clickLabel('閉じる')
+  await sleep(300)
+  const afterUndo = await page.$$eval('.mel__row', (els) => els.length)
+  assert(afterUndo === 1, `シート上で取り消しできる (${afterUndo})`)
 
   // ざっくり記録
   await clickText('ざっくり')

@@ -5,6 +5,7 @@ import { tapHaptic } from '../../lib/feedback'
 import { Sheet } from '../../components/ui/Sheet'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
+import { useBusy } from '../../hooks/useBusy'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { FoodFormSheet } from './FoodFormSheet'
 import type { Food } from '../../types'
@@ -22,6 +23,7 @@ interface FoodPickerSheetProps {
 /** 全フードから検索して記録する。編集・新規登録もここから */
 export function FoodPickerSheet({ open, onClose, foods, date }: FoodPickerSheetProps) {
   const toast = useToast()
+  const guard = useBusy()
   const [q, setQ] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Food | null>(null)
@@ -31,11 +33,12 @@ export function FoodPickerSheet({ open, onClose, foods, date }: FoodPickerSheetP
     return k ? foods.filter((f) => f.name.toLowerCase().includes(k)) : foods
   }, [foods, q])
 
-  const log = async (food: Food) => {
-    tapHaptic()
-    const entry = await logFood(food, 1, date)
-    toast.show(`${food.name} を記録`, 'success', { label: '取り消す', onClick: () => void unlogFood(entry) }, UNDO_MS)
-  }
+  const log = (food: Food) =>
+    guard(async () => {
+      tapHaptic()
+      const entry = await logFood(food, 1, date)
+      toast.show(`${food.name} を記録`, 'success', { label: '取り消す', onClick: () => void unlogFood(entry) }, UNDO_MS)
+    })
 
   return (
     <>

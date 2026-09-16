@@ -97,6 +97,7 @@ export function MealEntryList({ entries }: MealEntryListProps) {
       >
         {editing && (
           <div className="stack">
+            <p className="faint mel__preset-hint">タップですぐ保存</p>
             <div className="mel__presets" role="group" aria-label="分量の目安">
               {QTY_PRESETS.map((q) => (
                 <button key={q} type="button" className={`mel__preset ${qty === q ? 'mel__preset--on' : ''}`} onClick={() => void save(q)}>

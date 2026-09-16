@@ -179,6 +179,12 @@
   flex-shrink: 0;
 }
 
+.xb__done:disabled,
+.xb__set--ghost:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
 .xb__done:active {
   transform: scale(0.92);
   box-shadow: 0 2px 6px rgba(200, 245, 66, 0.2);

@@ -18,6 +18,7 @@
 
 .sheet {
   position: relative;
+  transition: transform var(--dur) var(--ease-out);
   background: var(--surface);
   border-top-left-radius: var(--r-lg);
   border-top-right-radius: var(--r-lg);
@@ -41,12 +42,18 @@
   height: 88dvh;
 }
 
+.sheet__grip {
+  padding: var(--s-3) 0 var(--s-1);
+  touch-action: none;
+  cursor: grab;
+}
+
 .sheet__handle {
   width: 40px;
   height: 4px;
   border-radius: var(--r-full);
   background: var(--border-strong);
-  margin: var(--s-3) auto 0;
+  margin: 0 auto;
 }
 
 .sheet__head {

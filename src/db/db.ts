@@ -10,7 +10,6 @@ import type {
   WorkoutSet,
 } from '../types'
 import { SEED_EXERCISES } from './seed'
-import { AI_PROVIDERS } from '../types'
 
 export const DEFAULT_SETTINGS: Settings = {
   id: 'app',
@@ -22,11 +21,8 @@ export const DEFAULT_SETTINGS: Settings = {
   ai: {
     provider: 'claude',
     keys: { claude: '', openai: '', gemini: '' },
-    models: {
-      claude: AI_PROVIDERS.claude.defaultModel,
-      openai: AI_PROVIDERS.openai.defaultModel,
-      gemini: AI_PROVIDERS.gemini.defaultModel,
-    },
+    // 空欄なら AI_PROVIDERS の既定モデルを使う
+    models: { claude: '', openai: '', gemini: '' },
   },
   onboarded: false,
 }

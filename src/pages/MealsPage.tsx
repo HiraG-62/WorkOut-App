@@ -3,6 +3,8 @@ import { Camera, ChevronLeft, ChevronRight, CopyPlus, Layers, Search, UtensilsCr
 import { copyMeals } from '../db/repo'
 import { addDays, formatRelative } from '../lib/date'
 import { useToday } from '../hooks/useToday'
+import { useBusy } from '../hooks/useBusy'
+import { db } from '../db/db'
 import { isAiConfigured } from '../lib/ai'
 import { useSettings } from '../hooks/useSettings'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -23,12 +25,14 @@ import { MealSetsSheet } from '../features/meals/MealSetsSheet'
 import './MealsPage.css'
 
 const QUICK_LIMIT = 6
+const UNDO_MS = 6000
 
 type SheetKind = 'picker' | 'form' | 'quick' | 'photo' | 'sets' | null
 
 export function MealsPage() {
   const settings = useSettings()
   const toast = useToast()
+  const guard = useBusy()
   const today = useToday()
   const [date, setDate] = useState(today)
   // 「今日」を見ている最中に日付が変わったら追従する（過去日を見ている時はそのまま）
@@ -45,10 +49,15 @@ export function MealsPage() {
   const isToday = date === today
   const aiReady = isAiConfigured(settings.ai)
 
-  const copyYesterday = async () => {
-    const n = await copyMeals(addDays(date, -1), date)
-    toast.show(n > 0 ? `前日の${n}品をコピーしました` : '前日の記録がありません', n > 0 ? 'success' : 'info')
-  }
+  const copyYesterday = () =>
+    guard(async () => {
+      const ids = await copyMeals(addDays(date, -1), date)
+      if (ids.length === 0) {
+        toast.show('前日の記録がありません', 'info')
+        return
+      }
+      toast.show(`前日の${ids.length}品をコピーしました`, 'success', { label: '取り消す', onClick: () => void db.meals.bulkDelete(ids) }, UNDO_MS)
+    })
 
   return (
     <div className="page mp">
@@ -79,7 +88,7 @@ export function MealsPage() {
           ざっくり
         </Button>
         <Button icon={<Search size={18} aria-hidden />} onClick={() => setSheet('picker')}>
-          フード
+          登録済み
         </Button>
         <Button icon={<Layers size={18} aria-hidden />} onClick={() => setSheet('sets')}>
           セット
@@ -90,16 +99,7 @@ export function MealsPage() {
       </div>
 
       <Section title="よく食べるもの">
-        {foods.length === 0 ? (
-          <div className="mp__nofood">
-            <p className="muted">よく食べるものを登録すると、ここからワンタップで記録できます。まずは「ざっくり」で今日の分を残すだけでも大丈夫です。</p>
-            <Button variant="accent-soft" onClick={() => setSheet('form')}>
-              フードを登録する
-            </Button>
-          </div>
-        ) : (
-          <QuickFoods foods={foods} date={date} limit={QUICK_LIMIT} onMore={() => setSheet('picker')} onAdd={() => setSheet('form')} />
-        )}
+        <QuickFoods foods={foods} date={date} limit={QUICK_LIMIT} onMore={() => setSheet('picker')} onAdd={() => setSheet('form')} />
       </Section>
 
       <Card>
@@ -108,7 +108,11 @@ export function MealsPage() {
 
       <Section title={`${formatRelative(date)}の記録`}>
         {entries.length === 0 ? (
-          <EmptyState icon={<UtensilsCrossed size={24} />} title="まだ記録がありません" description={aiReady ? '写真を撮るか、「ざっくり」で目安だけ残しましょう' : '「ざっくり」なら数値の目安だけで10秒で記録できます'} />
+          <EmptyState
+            icon={<UtensilsCrossed size={24} />}
+            title="まだ記録がありません"
+            description={aiReady ? '写真を撮るか、「ざっくり」で目安だけ残しましょう。よく食べるものを登録すると次からワンタップです' : '「ざっくり」なら数値の目安だけで10秒で記録できます。よく食べるものを登録すると次からワンタップです'}
+          />
         ) : (
           <MealEntryList entries={entries} />
         )}

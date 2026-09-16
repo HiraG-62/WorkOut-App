@@ -10,7 +10,7 @@
 }
 
 /* 休憩タイマーが出ている間はその上に表示する */
-.shell--timer ~ .toast-stack {
+body.has-timer .toast-stack {
   bottom: calc(var(--nav-h) + var(--safe-bottom) + var(--s-3) + 92px);
 }
 

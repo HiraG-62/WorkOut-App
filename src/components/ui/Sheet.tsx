@@ -5,6 +5,8 @@ import './Sheet.css'
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 const KEYBOARD_THRESHOLD_PX = 120
+/** ハンドル部分をこれ以上下にドラッグしたら閉じる */
+const SWIPE_CLOSE_PX = 80
 const ROOT_ID = 'root'
 
 /** 開いているシートのスタック。Esc は最上位だけが処理し、背景は inert にする */
@@ -110,6 +112,30 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
     }
   }, [open])
 
+  // ヘッダーを下にスワイプして閉じる
+  const dragStartY = useRef<number | null>(null)
+  const onDragStart = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    dragStartY.current = e.clientY
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  const onDragMove = (e: React.PointerEvent) => {
+    const panel = panelRef.current
+    if (dragStartY.current === null || !panel) return
+    const dy = Math.max(0, e.clientY - dragStartY.current)
+    panel.style.transform = dy > 0 ? `translateY(${dy}px)` : ''
+    panel.style.transition = 'none'
+  }
+  const onDragEnd = (e: React.PointerEvent) => {
+    const panel = panelRef.current
+    if (dragStartY.current === null || !panel) return
+    const dy = e.clientY - dragStartY.current
+    dragStartY.current = null
+    panel.style.transition = ''
+    panel.style.transform = ''
+    if (dy > SWIPE_CLOSE_PX) onCloseRef.current()
+  }
+
   if (!open) return null
 
   return createPortal(
@@ -123,7 +149,9 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
       >
-        <div className="sheet__handle" aria-hidden />
+        <div className="sheet__grip" onPointerDown={onDragStart} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}>
+          <div className="sheet__handle" aria-hidden />
+        </div>
         <div className="sheet__head">
           {title && (
             <h2 id={titleId} className="sheet__title">

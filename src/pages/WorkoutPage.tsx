@@ -4,7 +4,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronRight, Dumbbell, ListPlus, Play, Repeat } from 'lucide-react'
 import { db } from '../db/db'
 import { createWorkout } from '../db/repo'
-import { formatDuration, formatRelative, todayKey } from '../lib/date'
+import { formatDuration, formatRelative } from '../lib/date'
+import { useToday } from '../hooks/useToday'
+import { useBusy } from '../hooks/useBusy'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, Section } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
@@ -17,7 +19,8 @@ const HISTORY_LIMIT = 20
 
 export function WorkoutPage() {
   const navigate = useNavigate()
-  const today = todayKey()
+  const today = useToday()
+  const guard = useBusy()
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(HISTORY_LIMIT).toArray(), [])
   const exerciseList = useLiveQuery(() => db.exercises.toArray(), [])
   const allSets = useLiveQuery(() => db.sets.toArray(), [])
@@ -36,16 +39,18 @@ export function WorkoutPage() {
   const setsOf = (id: string) => (allSets ?? []).filter((s) => s.workoutId === id)
   const history = (workouts ?? []).filter((w) => w.id !== todayWorkout?.id)
 
-  const startFromLast = async () => {
-    if (!lastWorkout) return
-    const w = await createWorkout(lastWorkout.exerciseIds.filter((id) => exercises.get(id) && !exercises.get(id)?.archived))
-    navigate(`/workout/${w.id}`)
-  }
+  const startFromLast = () =>
+    guard(async () => {
+      if (!lastWorkout) return
+      const w = await createWorkout(lastWorkout.exerciseIds.filter((id) => exercises.get(id) && !exercises.get(id)?.archived))
+      navigate(`/workout/${w.id}`)
+    })
 
-  const startWith = async (ids: string[]) => {
-    const w = await createWorkout(ids)
-    navigate(`/workout/${w.id}`)
-  }
+  const startWith = (ids: string[]) =>
+    guard(async () => {
+      const w = await createWorkout(ids)
+      navigate(`/workout/${w.id}`)
+    })
 
   if (!workouts || !exerciseList || !allSets) {
     return (

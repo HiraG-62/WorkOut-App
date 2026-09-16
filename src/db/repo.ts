@@ -196,12 +196,14 @@ export async function logFood(food: Food, quantity: number, date = todayKey()): 
     createdAt: Date.now(),
   }
   const slot = timeSlot()
-  const slotCounts: Food['slotCounts'] = [...food.slotCounts]
-  slotCounts[slot] += 1
   await db.transaction('rw', db.meals, db.foods, async () => {
     await db.meals.add(entry)
+    // 連続タップでも取りこぼさないよう、最新の値を読んでから加算する
+    const fresh = (await db.foods.get(food.id)) ?? food
+    const slotCounts: Food['slotCounts'] = [...fresh.slotCounts]
+    slotCounts[slot] += 1
     await db.foods.update(food.id, {
-      useCount: food.useCount + 1,
+      useCount: fresh.useCount + 1,
       lastUsedAt: Date.now(),
       slotCounts,
     })
@@ -255,10 +257,10 @@ export async function deleteMeal(id: string): Promise<void> {
   await db.meals.delete(id)
 }
 
-/** 指定日の食事を今日にコピーする */
-export async function copyMeals(fromDate: string, toDate = todayKey()): Promise<number> {
+/** 指定日の食事を今日にコピーする。取り消し用にコピーした id を返す */
+export async function copyMeals(fromDate: string, toDate = todayKey()): Promise<string[]> {
   const src = await db.meals.where('date').equals(fromDate).sortBy('createdAt')
-  if (src.length === 0) return 0
+  if (src.length === 0) return []
   // 元の時刻（朝・昼・夜）を保ったままコピー先の日付に載せ替える
   const fromStart = fromDateKey(fromDate).getTime()
   const toStart = fromDateKey(toDate).getTime()
@@ -269,7 +271,7 @@ export async function copyMeals(fromDate: string, toDate = todayKey()): Promise<
     createdAt: toStart + (m.createdAt - fromStart),
   }))
   await db.meals.bulkAdd(copies)
-  return copies.length
+  return copies.map((c) => c.id)
 }
 
 export async function addMealSet(name: string, items: MealSet['items']): Promise<MealSet> {

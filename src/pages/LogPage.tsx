@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
-import { formatShort, lastNDays, todayKey } from '../lib/date'
+import { formatShort, lastNDays } from '../lib/date'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, Section } from '../components/ui/Card'
 import { Segmented } from '../components/ui/Field'
@@ -74,7 +74,8 @@ export function LogPage() {
   }, [weightPoints])
 
   const unit = selected?.type === 'time' ? '秒' : '回'
-  const xLabelEvery = (n: number) => (x: string, i: number) => (i % n === 0 ? formatShort(x).split(' ')[0] : null)
+  // n 日ごとに加えて最終点（今日）にも必ずラベルを出す
+  const xLabelEvery = (n: number, total: number) => (x: string, i: number) => (i === total - 1 || (i % n === 0 && i < total - 1 - n / 2) ? formatShort(x).split(' ')[0] : null)
 
   return (
     <div className="page lg">
@@ -93,7 +94,7 @@ export function LogPage() {
               <span className="faint"> · 点線は7日平均</span>
             </p>
           )}
-          <LineChart points={weightPoints} secondary={weightAvg} unit="kg" ariaLabel={`直近${range}日の体重推移`} xLabel={xLabelEvery(range === 30 ? 7 : 21)} />
+          <LineChart points={weightPoints} secondary={weightAvg} unit="kg" ariaLabel={`直近${range}日の体重推移`} xLabel={xLabelEvery(range === 30 ? 7 : 21, weightPoints.length)} />
         </Card>
       </Section>
 
@@ -125,7 +126,6 @@ export function LogPage() {
         )}
       </Section>
 
-      <p className="faint lg__foot">今日: {formatShort(todayKey())}</p>
     </div>
   )
 }

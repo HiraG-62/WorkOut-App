@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { addExercise, archiveExercise, unarchiveExercise, updateExercise } from '../../db/repo'
 import { useToast } from '../../components/ui/Toast'
+import { useBusy } from '../../hooks/useBusy'
 import { Sheet } from '../../components/ui/Sheet'
 import { Segmented, SelectField, TextField } from '../../components/ui/Field'
 import { Toggle } from '../../components/ui/Toggle'
@@ -31,6 +32,7 @@ const EMPTY: Draft = { name: '', type: 'reps', bodyPart: 'chest', useWeight: fal
 
 export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSaved }: ExerciseFormSheetProps) {
   const toast = useToast()
+  const guard = useBusy()
   const [d, setD] = useState<Draft>(EMPTY)
   const [error, setError] = useState('')
 
@@ -51,11 +53,12 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
     setError('')
   }, [open, exercise])
 
-  const save = async () => {
-    if (!d.name.trim()) {
-      setError('種目名を入力してください')
-      return
-    }
+  const save = () =>
+    guard(async () => {
+      if (!d.name.trim()) {
+        setError('種目名を入力してください')
+        return
+      }
     const rest = Number(d.restSec)
     const payload = {
       name: d.name.trim(),
@@ -65,14 +68,14 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
       restSec: Number.isFinite(rest) && rest > 0 ? Math.round(rest) : undefined,
       progressionId: d.progressionId || undefined,
     }
-    if (exercise) {
-      await updateExercise(exercise.id, payload)
-      onSaved?.({ ...exercise, ...payload })
-    } else {
-      onSaved?.(await addExercise(payload))
-    }
-    onClose()
-  }
+      if (exercise) {
+        await updateExercise(exercise.id, payload)
+        onSaved?.({ ...exercise, ...payload })
+      } else {
+        onSaved?.(await addExercise(payload))
+      }
+      onClose()
+    })
 
   const progressionOptions = [
     { value: '', label: 'なし' },

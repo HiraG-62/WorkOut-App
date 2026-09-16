@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { Plus, X } from 'lucide-react'
 import { useRestTimer } from '../hooks/useRestTimer'
 import { formatDuration } from '../lib/date'
@@ -10,7 +11,8 @@ export function RestTimerBar() {
   const timer = useRestTimer()
   if (!timer.running) return null
   const ratio = timer.totalSec > 0 ? timer.remainingSec / timer.totalSec : 0
-  return (
+  // シート表示中に #root が inert になっても操作できるよう body 直下に描画する
+  return createPortal(
     <div className="rest-bar" role="timer" aria-live="off" aria-label={`休憩 残り${timer.remainingSec}秒`}>
       <div className="rest-bar__progress" style={{ transform: `scaleX(${ratio})` }} />
       <div className="rest-bar__inner">
@@ -26,6 +28,7 @@ export function RestTimerBar() {
           <X size={18} aria-hidden />
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

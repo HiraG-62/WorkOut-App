@@ -18,6 +18,11 @@ interface Backup {
 
 const EMPTY_KEYS = { claude: '', openai: '', gemini: '' } as const
 
+function isIos(): boolean {
+  const ua = navigator.userAgent
+  return /iPhone|iPad|iPod/.test(ua) || (ua.includes('Mac') && navigator.maxTouchPoints > 1)
+}
+
 export async function exportBackup(): Promise<string> {
   const [exercises, workouts, sets, foods, meals, mealSets, weights, settings] = await Promise.all([
     db.exercises.toArray(),
@@ -49,7 +54,7 @@ export async function exportBackup(): Promise<string> {
 /** iOS のスタンドアロン PWA では download が効かないため、共有シートが使えるならそちらを優先 */
 export async function saveTextFile(filename: string, text: string): Promise<void> {
   const file = new File([text], filename, { type: 'application/json' })
-  if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+  if (isIos() && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: filename })
       return
@@ -90,9 +95,11 @@ function parseBackup(json: string): Backup {
   return b as unknown as Backup
 }
 
-/** 既存データを全て置き換える。端末に保存済みのAPIキーは維持する */
-export async function importBackup(json: string): Promise<void> {
+/** 既存データを全て置き換える。端末に保存済みのAPIキーは維持する。設定を書き換えたかを返す */
+export async function importBackup(json: string): Promise<{ settingsRestored: boolean }> {
   const b = parseBackup(json)
+  // 体重は日付ユニーク。重複していたら後のものを残す
+  b.weights = [...new Map(b.weights.map((w) => [w.date, w])).values()]
   const current = await db.settings.get('app')
   await db.transaction('rw', [db.exercises, db.workouts, db.sets, db.foods, db.meals, db.mealSets, db.weights, db.settings], async () => {
     await Promise.all([
@@ -131,4 +138,5 @@ export async function importBackup(json: string): Promise<void> {
       await db.settings.put(merged)
     }
   })
+  return { settingsRestored: !!b.settings }
 }

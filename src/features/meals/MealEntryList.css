@@ -65,6 +65,12 @@
   font-weight: 600;
 }
 
+.mel__preset-hint {
+  font-size: 12px;
+  text-align: center;
+  margin-bottom: calc(-1 * var(--s-2));
+}
+
 .mel__presets {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

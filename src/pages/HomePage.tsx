@@ -6,6 +6,7 @@ import { db } from '../db/db'
 import { createWorkout, updateSettings } from '../db/repo'
 import { formatDuration, formatLong } from '../lib/date'
 import { useToday } from '../hooks/useToday'
+import { useBusy } from '../hooks/useBusy'
 import { isAiConfigured } from '../lib/ai'
 import { useSettings } from '../hooks/useSettings'
 import { Card, Section } from '../components/ui/Card'
@@ -27,6 +28,7 @@ export function HomePage() {
   const navigate = useNavigate()
   const settings = useSettings()
   const today = useToday()
+  const guard = useBusy()
   const { totals } = useDayMeals(today)
   const { foods } = useFoods()
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(5).toArray(), [])
@@ -43,11 +45,12 @@ export function HomePage() {
   const exercises = useMemo(() => new Map((exerciseList ?? []).map((e) => [e.id, e])), [exerciseList])
   const aiReady = isAiConfigured(settings.ai)
 
-  const startFromLast = async () => {
-    if (!lastWorkout) return
-    const w = await createWorkout(lastWorkout.exerciseIds.filter((id) => exercises.get(id) && !exercises.get(id)?.archived))
-    navigate(`/workout/${w.id}`)
-  }
+  const startFromLast = () =>
+    guard(async () => {
+      if (!lastWorkout) return
+      const w = await createWorkout(lastWorkout.exerciseIds.filter((id) => exercises.get(id) && !exercises.get(id)?.archived))
+      navigate(`/workout/${w.id}`)
+    })
 
   return (
     <div className="page hp">

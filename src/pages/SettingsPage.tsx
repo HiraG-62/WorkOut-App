@@ -4,7 +4,7 @@ import { Calculator, Download, Eye, EyeOff, Sparkles, Trash2, Upload } from 'luc
 import { db } from '../db/db'
 import { getLatestWeight, updateSettings } from '../db/repo'
 import { calcTargets } from '../lib/nutrition'
-import { createAiClient, AiError } from '../lib/ai'
+import { createAiClient, AiError, isAiConfigured } from '../lib/ai'
 import { exportBackup, importBackup, saveTextFile } from '../lib/backup'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, Section } from '../components/ui/Card'
@@ -57,7 +57,15 @@ export function SettingsPage() {
     setFormKey((k) => k + 1)
   }, [settings])
 
-  if (!settings) return <div className="page" />
+  if (!settings) {
+    return (
+      <div className="page st" aria-busy="true">
+        <div className="skeleton skeleton--header" />
+        <div className="skeleton skeleton--card" />
+        <div className="skeleton skeleton--card" />
+      </div>
+    )
+  }
   return (
     <SettingsForm
       key={formKey}
@@ -99,6 +107,7 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
   }, [profile, targets, ai, initial])
 
   const weightKg = latestWeight?.kg ?? FALLBACK_WEIGHT_KG
+  const aiReady = isAiConfigured(ai)
 
   const autoCalc = () => {
     setTargets(calcTargets(profile, weightKg))
@@ -142,9 +151,9 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
     e.target.value = ''
     if (!file) return
     try {
-      await importBackup(await file.text())
+      const { settingsRestored } = await importBackup(await file.text())
       toast.show('復元しました', 'success')
-      onImported()
+      if (settingsRestored) onImported()
     } catch (err) {
       toast.show(err instanceof Error ? err.message : '復元に失敗しました', 'error')
     }
@@ -191,10 +200,11 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
             <Button block icon={<Calculator size={18} aria-hidden />} onClick={autoCalc}>
               自動計算
             </Button>
-            <Button block variant="accent-soft" icon={<Sparkles size={18} aria-hidden />} onClick={() => void askAi()} loading={aiBusy}>
+            <Button block variant="accent-soft" icon={<Sparkles size={18} aria-hidden />} onClick={() => void askAi()} loading={aiBusy} disabled={!aiReady}>
               AIに相談
             </Button>
           </div>
+          {!aiReady && <p className="faint st__note">AI の API キーを設定すると「AIに相談」が使えます</p>}
           <div className="st__targets">
             <Stepper label="カロリー" value={targets.kcal} onChange={(kcal) => setTargets({ ...targets, kcal })} step={KCAL_STEP} min={KCAL_MIN} max={KCAL_MAX} unit="kcal" />
             <Stepper label="タンパク質" value={targets.protein} onChange={(protein) => setTargets({ ...targets, protein })} step={G_STEP} min={0} max={PROTEIN_MAX} unit="g" />

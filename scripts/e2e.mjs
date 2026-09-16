@@ -259,6 +259,59 @@ try {
   await clickLabel('閉じる')
   await sleep(300)
 
+  // 8c. OpenAI をモックして、推定結果を「1つのメニュー」として登録→記録する流れを通す
+  await page.goto(`${BASE}#/settings`, { waitUntil: 'networkidle0' })
+  await sleep(400)
+  await clickText('ChatGPT')
+  await sleep(200)
+  await typeInto('input[type="password"]', 'sk-dummy-openai')
+  await sleep(700)
+  await page.setRequestInterception(true)
+  const mockEstimate = {
+    items: [
+      { name: '鶏むね肉', amount: '200g', kcal: 216, protein: 46, fat: 3, carbs: 0 },
+      { name: 'ブロッコリー', amount: '100g', kcal: 33, protein: 4.3, fat: 0.5, carbs: 5.2 },
+      { name: '玄米', amount: '150g', kcal: 248, protein: 4.2, fat: 1.5, carbs: 53 },
+    ],
+    confidence: 'high',
+    note: 'モックの推定結果です',
+  }
+  const mockOpenAi = (req) => {
+    if (req.url().startsWith('https://api.openai.com/')) {
+      req.respond({
+        status: 200,
+        contentType: 'application/json',
+        headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' },
+        body: JSON.stringify({ choices: [{ message: { content: JSON.stringify(mockEstimate) } }] }),
+      })
+      return
+    }
+    req.continue()
+  }
+  page.on('request', mockOpenAi)
+  await page.goto(`${BASE}#/meals`, { waitUntil: 'networkidle0' })
+  await sleep(400)
+  await clickText('AIに話す')
+  await sleep(400)
+  await page.waitForSelector('.am__text', { timeout: 3000 })
+  await page.type('.am__text', '鶏むね肉200g、ブロッコリー、玄米150g')
+  await clickText('ChatGPT で推定する')
+  await page.waitForSelector('.am__items', { timeout: 8000 })
+  const itemCount = await page.$$eval('.am__item', (els) => els.length)
+  assert(itemCount === 3, `AI 推定結果が3品目表示される (${itemCount})`)
+  await page.click('.am__menu-toggle input')
+  await sleep(200)
+  await page.type('.am__menu-body input', 'いつもの夕食')
+  await shot('ai-menu-register')
+  await clickText('「いつもの夕食」を登録して記録する')
+  await sleep(600)
+  const menuLogged = await page.$$eval('.mel__row', (els) => els.some((e) => e.textContent?.includes('いつもの夕食')))
+  assert(menuLogged, 'メニューとして登録した1食が今日の記録に入る')
+  const menuChip = await page.$$eval('.qf__chip', (els) => els.some((e) => e.textContent?.includes('いつもの夕食')))
+  assert(menuChip, '登録したメニューが「よく食べるもの」に出る')
+  page.off('request', mockOpenAi)
+  await page.setRequestInterception(false)
+
   // フード登録フォームに AI 推定ボタンが出る（名前を入れると有効）
   await clickText('フード登録')
   await sleep(300)

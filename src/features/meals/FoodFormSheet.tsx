@@ -68,6 +68,8 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
   const [error, setError] = useState('')
   const [aiBusy, setAiBusy] = useState(false)
   const [aiNote, setAiNote] = useState('')
+  /** AI に伝える材料・内容。空なら名前から推定する */
+  const [aiText, setAiText] = useState('')
   const abortRef = useRef<AbortController | null>(null)
   const aiReady = isAiConfigured(settings.ai)
 
@@ -91,6 +93,7 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
     )
     setError('')
     setAiNote('')
+    setAiText('')
     setAiBusy(false)
   }, [open, food])
 
@@ -98,11 +101,12 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
 
   const fillKcal = () => setD((s) => ({ ...s, kcal: String(pfcToKcal(num(s.protein), num(s.fat), num(s.carbs))) }))
 
-  /** 名前（例: 鶏むね肉 100g、セブンのサラダチキン）から AI に栄養を推定させて埋める */
+  /** 材料・内容（未入力なら名前）から AI に栄養を推定させて埋める */
   const fillByAi = async () => {
     const name = d.name.trim()
-    if (!name) {
-      setError('先に名前を入力してください')
+    const source = aiText.trim() || name
+    if (!source) {
+      setError('名前か、材料・内容を入力してください')
       return
     }
     const client = await createAiClient(settings.ai)
@@ -115,9 +119,9 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
     setError('')
     setAiNote('')
     try {
-      const est = await client.estimateFoodFromText({ text: name }, controller.signal)
+      const est = await client.estimateFoodFromText({ text: source }, controller.signal)
       if (controller.signal.aborted) return
-      setD((s) => ({ ...s, ...estimateToDraft(name, est) }))
+      setD((s) => ({ ...s, ...estimateToDraft(name || source, est) }))
       setAiNote(est.items.length > 1 ? `${est.items.length}品目の合計です。${est.note}` : est.note)
     } catch (err) {
       if (controller.signal.aborted && abortRef.current !== controller) return
@@ -189,7 +193,18 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
         <TextField label="名前" value={d.name} onChange={set('name')} placeholder="例: 鶏むね肉 100g、セブンのサラダチキン" error={error} autoFocus={!food} enterKeyHint="next" />
         {aiReady && (
           <div className="ff__ai">
-            <Button variant="accent-soft" block icon={<Sparkles size={18} aria-hidden />} onClick={() => void fillByAi()} loading={aiBusy} disabled={!d.name.trim()}>
+            <label className="field">
+              <span className="field__label">材料や内容を AI に伝える（任意）</span>
+              <textarea
+                value={aiText}
+                onChange={(e) => setAiText(e.target.value)}
+                placeholder="例: 鶏むね肉200g、ブロッコリー、玄米150g、オリーブオイル少々"
+                rows={2}
+                className="ff__ai-text"
+              />
+              <span className="field__hint">空欄なら名前から推定します</span>
+            </label>
+            <Button variant="accent-soft" block icon={<Sparkles size={18} aria-hidden />} onClick={() => void fillByAi()} loading={aiBusy} disabled={!d.name.trim() && !aiText.trim()}>
               {AI_PROVIDERS[settings.ai.provider].label} に栄養を推定してもらう
             </Button>
             {aiNote && <p className="ff__ai-note">{aiNote}</p>}

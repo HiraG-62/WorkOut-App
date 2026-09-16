@@ -204,3 +204,66 @@
 .am__save--on {
   color: var(--accent);
 }
+
+.am__menu {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  transition: border-color var(--dur), background-color var(--dur);
+}
+
+.am__menu--on {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.am__menu-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--tap);
+  cursor: pointer;
+  color: var(--text);
+}
+
+.am__menu-toggle input {
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  accent-color: var(--accent);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.am__menu--on .am__menu-toggle svg {
+  color: var(--accent);
+}
+
+.am__menu-title {
+  font-weight: 600;
+}
+
+.am__menu-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.am__menu-body input {
+  background: var(--surface);
+}
+
+.am__menu-sum {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.am__menu-sum .faint {
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Camera, MessageSquareText, RefreshCw, Sparkles } from 'lucide-react'
+import { BookmarkPlus, Camera, MessageSquareText, RefreshCw, Sparkles } from 'lucide-react'
 import { addFood, logFood, logQuickMeal } from '../../db/repo'
 import { encodeImageForAi, type EncodedImage } from '../../lib/image'
 import { createAiClient, AiError, type AiClient } from '../../lib/ai'
@@ -17,6 +17,7 @@ const CAMERA_AUTO_OPEN_DELAY_MS = 250
 const DEFAULT_UNIT = '1食'
 const CONFIDENCE_LABEL = { low: '自信なし', medium: 'まあまあ', high: '自信あり' } as const
 const TEXT_EXAMPLES = ['牛丼の並盛とサラダ、缶コーヒー', '鮭おにぎり2個とみそ汁', 'ラーメン大盛りと餃子6個'] as const
+const MENU_NAME_MAX = 40
 
 /** photo: 写真から推定 / text: 食べたものを文章で伝えて推定 */
 export type AiMealMode = 'photo' | 'text'
@@ -49,6 +50,9 @@ export function AiMealSheet({ open, onClose, date, mode }: AiMealSheetProps) {
   const [result, setResult] = useState<FoodEstimate | null>(null)
   const [items, setItems] = useState<ResultItem[]>([])
   const [error, setError] = useState('')
+  /** 推定した品目を合算して 1 つのフード（メニュー）として登録する */
+  const [asMenu, setAsMenu] = useState(false)
+  const [menuName, setMenuName] = useState('')
 
   // 閉じたら進行中の推定を打ち切る（遅れて届いた結果が次回に混ざらないように）
   useEffect(() => {
@@ -66,6 +70,8 @@ export function AiMealSheet({ open, onClose, date, mode }: AiMealSheetProps) {
     setResult(null)
     setItems([])
     setError('')
+    setAsMenu(false)
+    setMenuName('')
   }, [open])
 
   // 写真モードは開いたら即カメラ、文章モードは即入力欄へ（タップ数を減らす）
@@ -130,9 +136,39 @@ export function AiMealSheet({ open, onClose, date, mode }: AiMealSheetProps) {
   const toggle = (i: number, key: 'include' | 'saveAsFood') =>
     setItems((list) => list.map((it, idx) => (idx === i ? { ...it, [key]: !it[key] } : it)))
 
+  const selected = items.filter((it) => it.include)
+  const sum = selected.reduce(
+    (acc, it) => ({ kcal: acc.kcal + it.kcal, protein: acc.protein + it.protein, fat: acc.fat + it.fat, carbs: acc.carbs + it.carbs }),
+    { kcal: 0, protein: 0, fat: 0, carbs: 0 },
+  )
+  const round1 = (n: number) => Math.round(n * 10) / 10
+
+  /** 選択した品目を合算した 1 フードを登録する。log=true なら今日の記録にも入れる */
+  const saveMenu = async (log: boolean) => {
+    const name = menuName.trim()
+    if (selected.length === 0 || !name) return
+    const food = await addFood({
+      name,
+      unitLabel: DEFAULT_UNIT,
+      kcal: Math.round(sum.kcal),
+      protein: round1(sum.protein),
+      fat: round1(sum.fat),
+      carbs: round1(sum.carbs),
+      source: 'ai',
+    })
+    if (log) await logFood(food, 1, date)
+    toast.show(log ? `「${name}」を登録して記録しました` : `「${name}」を登録しました`, 'success')
+    onClose()
+  }
+
+  const commitMenuOnly = () => guard(() => saveMenu(false))
+
   const commit = () =>
     guard(async () => {
-      const selected = items.filter((it) => it.include)
+      if (asMenu) {
+        await saveMenu(true)
+        return
+      }
       if (selected.length === 0) return
       for (const it of selected) {
         if (it.saveAsFood) {
@@ -146,7 +182,8 @@ export function AiMealSheet({ open, onClose, date, mode }: AiMealSheetProps) {
       onClose()
     })
 
-  const total = items.filter((it) => it.include).reduce((s, it) => s + it.kcal, 0)
+  const total = sum.kcal
+  const canCommit = selected.length > 0 && (!asMenu || menuName.trim().length > 0)
   const providerLabel = AI_PROVIDERS[settings.ai.provider].label
   const title = mode === 'photo' ? '写真から推定' : '食べたものを伝えて推定'
 
@@ -162,9 +199,16 @@ export function AiMealSheet({ open, onClose, date, mode }: AiMealSheetProps) {
             {providerLabel} で推定する
           </Button>
         ) : phase === 'result' ? (
-          <Button variant="primary" size="lg" block onClick={() => void commit()} disabled={items.every((it) => !it.include)}>
-            合計 {Math.round(total)} kcal を記録する
-          </Button>
+          <div className="stack stack--sm">
+            <Button variant="primary" size="lg" block onClick={() => void commit()} disabled={!canCommit}>
+              {asMenu ? `「${menuName.trim() || 'メニュー'}」を登録して記録する` : `合計 ${Math.round(total)} kcal を記録する`}
+            </Button>
+            {asMenu && (
+              <Button variant="ghost" size="sm" onClick={() => void commitMenuOnly()} disabled={!canCommit}>
+                登録だけして今日は記録しない
+              </Button>
+            )}
+          </div>
         ) : undefined
       }
     >
@@ -260,13 +304,40 @@ export function AiMealSheet({ open, onClose, date, mode }: AiMealSheetProps) {
                     </span>
                   </span>
                 </label>
-                <label className={`am__save ${it.saveAsFood ? 'am__save--on' : ''}`}>
-                  <input type="checkbox" checked={it.saveAsFood} onChange={() => toggle(i, 'saveAsFood')} disabled={!it.include} />
-                  マイフードに保存
-                </label>
+                {!asMenu && (
+                  <label className={`am__save ${it.saveAsFood ? 'am__save--on' : ''}`}>
+                    <input type="checkbox" checked={it.saveAsFood} onChange={() => toggle(i, 'saveAsFood')} disabled={!it.include} />
+                    マイフードに保存
+                  </label>
+                )}
               </li>
             ))}
           </ul>
+
+          <div className={`am__menu ${asMenu ? 'am__menu--on' : ''}`}>
+            <label className="am__menu-toggle">
+              <input type="checkbox" checked={asMenu} onChange={(e) => setAsMenu(e.target.checked)} />
+              <BookmarkPlus size={18} aria-hidden />
+              <span className="am__menu-title">まとめて1つのメニューとして登録</span>
+            </label>
+            {asMenu && (
+              <div className="am__menu-body">
+                <input
+                  type="text"
+                  value={menuName}
+                  onChange={(e) => setMenuName(e.target.value.slice(0, MENU_NAME_MAX))}
+                  placeholder="例: いつもの夕食、ジムの後の弁当"
+                  aria-label="メニュー名"
+                  enterKeyHint="done"
+                  autoFocus
+                />
+                <p className="am__menu-sum">
+                  1食 = <span className="num">{Math.round(sum.kcal)}</span> kcal · P{fmt1(round1(sum.protein))} F{fmt1(round1(sum.fat))} C{fmt1(round1(sum.carbs))}
+                  <span className="faint">（チェックした{selected.length}品の合計。次回からワンタップで記録できます）</span>
+                </p>
+              </div>
+            )}
+          </div>
           <Button variant="ghost" size="sm" icon={mode === 'photo' ? <RefreshCw size={16} aria-hidden /> : <MessageSquareText size={16} aria-hidden />} onClick={() => setPhase('input')}>
             {mode === 'photo' ? '補足を足して再推定' : '文章を直して再推定'}
           </Button>

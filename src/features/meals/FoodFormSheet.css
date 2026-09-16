@@ -19,6 +19,12 @@
   gap: var(--s-2);
 }
 
+.ff__ai-text {
+  min-height: 64px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
 .ff__ai-note {
   font-size: 12px;
   color: var(--text-2);

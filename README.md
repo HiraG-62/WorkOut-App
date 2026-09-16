@@ -27,6 +27,7 @@ npm run dev        # http://localhost:5173
 npm run build      # dist/ に PWA 込みで出力
 npm run lint
 npm run e2e        # 開発サーバー(5199)に対してスマホ相当の自動操作とスクリーンショット
+npm run pwa:check  # vite preview(4173) に対して Service Worker / マニフェストの登録確認
 ```
 
 `npm run e2e` は `puppeteer-core` でローカルの Chrome を使います。パスが違う場合は `CHROME_PATH` で指定してください。

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate } from 'react-router-dom'
-import { Camera, ChevronRight, Dumbbell, MessageSquareText, Play, Repeat, Settings, Sparkles, Zap } from 'lucide-react'
+import { Camera, ChevronRight, Dumbbell, MessageCircleHeart, MessageSquareText, Play, Repeat, Settings, Sparkles, Zap } from 'lucide-react'
 import { db } from '../db/db'
 import { createWorkout, updateSettings } from '../db/repo'
 import { formatDuration, formatLong } from '../lib/date'
@@ -20,6 +20,7 @@ import { AiMealSheet } from '../features/meals/AiMealSheet'
 import { PhotoPickers, usePhotoPicker } from '../features/meals/PhotoPickers'
 import { QuickMealSheet } from '../features/meals/QuickMealSheet'
 import { FoodFormSheet } from '../features/meals/FoodFormSheet'
+import { CoachSheet } from '../features/coach/CoachSheet'
 import { summarizeSets } from '../features/workout/useWorkoutStats'
 import { useDayBurn, useWeightInfo } from '../features/workout/useDayBurn'
 import './HomePage.css'
@@ -52,6 +53,9 @@ export function HomePage() {
   const [talkOpen, setTalkOpen] = useState(false)
   const [quickOpen, setQuickOpen] = useState(false)
   const [foodFormOpen, setFoodFormOpen] = useState(false)
+  const [coachOpen, setCoachOpen] = useState(false)
+  const [coachThreadId, setCoachThreadId] = useState<string | null>(null)
+  const lastThread = useLiveQuery(async () => (await db.coachThreads.orderBy('updatedAt').reverse().first()) ?? null, [])
   const exercises = useMemo(() => new Map((exerciseList ?? []).map((e) => [e.id, e])), [exerciseList])
   const aiReady = isAiConfigured(settings.ai)
 
@@ -165,11 +169,43 @@ export function HomePage() {
         {foods.length > 0 && <QuickFoods foods={foods} date={today} limit={QUICK_LIMIT} onMore={() => navigate('/meals')} onAdd={() => setFoodFormOpen(true)} />}
       </Section>
 
+      <Section title="AI コーチ">
+        <Card className="hp__coach">
+          <p className="hp__coach-lead">今の食事とトレを見て、簡単にできる改善を提案します</p>
+          {aiReady && lastThread && (
+            <button
+              type="button"
+              className="hp__coach-last"
+              onClick={() => {
+                setCoachThreadId(lastThread.id)
+                setCoachOpen(true)
+              }}
+            >
+              <span className="hp__coach-last-label">前回:</span> {lastThread.title}
+            </button>
+          )}
+          <Button
+            variant={aiReady ? 'accent-soft' : 'secondary'}
+            block
+            icon={<MessageCircleHeart size={18} aria-hidden />}
+            disabled={!aiReady}
+            onClick={() => {
+              setCoachThreadId(null)
+              setCoachOpen(true)
+            }}
+          >
+            相談する
+          </Button>
+          {!aiReady && <p className="faint hp__coach-note">設定で AI の API キーを登録すると使えます</p>}
+        </Card>
+      </Section>
+
       <PhotoPickers photo={photo} />
       <AiMealSheet open={photoOpen} onClose={() => setPhotoOpen(false)} date={today} mode="photo" initialFile={photoFile} />
       <AiMealSheet open={talkOpen} onClose={() => setTalkOpen(false)} date={today} mode="text" />
       <QuickMealSheet open={quickOpen} onClose={() => setQuickOpen(false)} date={today} />
       <FoodFormSheet open={foodFormOpen} onClose={() => setFoodFormOpen(false)} />
+      <CoachSheet open={coachOpen} onClose={() => setCoachOpen(false)} threadId={coachThreadId} date={today} />
     </div>
   )
 }

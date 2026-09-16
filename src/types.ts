@@ -58,7 +58,7 @@ export interface RoutineItem {
   seconds?: number
 }
 
-export type RoutineSource = 'manual' | 'workout' | 'youtube'
+export type RoutineSource = 'manual' | 'workout' | 'youtube' | 'ai'
 
 /** セットメニュー（種目 × セット数 × 目標） */
 export interface Routine {
@@ -304,4 +304,72 @@ export interface ParsedWorkout {
 export interface ParsedWorkoutResult extends ParsedWorkout {
   /** 動画本体を読んで判定したか（Gemini で成功した場合のみ true） */
   watched: boolean
+}
+
+/** AI コーチの1往復 */
+export interface CoachTurn {
+  role: 'user' | 'coach'
+  /** user: 質問文 / coach: summary と advice を表示用に結合したもの */
+  text: string
+  /** role === 'coach' のときの構造化回答 */
+  answer?: CoachAnswer
+  createdAt: number
+}
+
+/** AI コーチの相談スレッド */
+export interface CoachThread {
+  id: string
+  /** 最初の質問を切り詰めたもの */
+  title: string
+  turns: CoachTurn[]
+  provider: AiProvider
+  createdAt: number
+  updatedAt: number
+}
+
+/** AI が提案する料理（そのままフードとして登録できる） */
+export interface CoachMealIdea {
+  name: string
+  /** 作り方・買い方を1〜2文で */
+  howTo: string
+  /** 1単位の表示ラベル。例: 1人前, 1皿 */
+  unitLabel: string
+  kcal: number
+  protein: number
+  fat: number
+  carbs: number
+  /** なぜ今のユーザーに合うか1文 */
+  reason: string
+  /** フードに登録したらその id。開き直しても二重登録しないように保存する */
+  foodId?: string
+}
+
+/** AI が提案するトレーニングメニューの1種目 */
+export interface CoachWorkoutItem {
+  name: string
+  sets: number
+  /** 時間種目なら 0 */
+  reps: number
+  /** 回数種目なら 0 */
+  seconds: number
+  type: ExerciseType
+  bodyPart: BodyPart
+  useWeight: boolean
+  formFamily: FormFamily | 'none'
+  met: number
+}
+
+/** AI コーチの回答 */
+export interface CoachAnswer {
+  /** 現状の読み取りを1〜2文で（数字を1つ以上入れる） */
+  summary: string
+  /** 具体的な行動 2〜4 個、各1文 */
+  advice: string[]
+  /** 料理の提案 0〜4 件。相談内容が食事に関係なければ空 */
+  mealIdeas: CoachMealIdea[]
+  hasWorkoutIdea: boolean
+  /** hasWorkoutIdea が false なら name は空文字・items は空配列。routineId は保存後に付く */
+  workoutIdea: { name: string; items: CoachWorkoutItem[]; routineId?: string }
+  /** ユーザーが次に聞くとよい質問 2〜3 個 */
+  followUps: string[]
 }

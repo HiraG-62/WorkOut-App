@@ -1,4 +1,4 @@
-import type { ExerciseClassification, FoodEstimate, NutritionLabel, ParsedWorkoutResult, Profile, TargetSuggestion, Targets, WeeklyReviewResult } from '../../types'
+import type { CoachAnswer, ExerciseClassification, FoodEstimate, NutritionLabel, ParsedWorkoutResult, Profile, TargetSuggestion, Targets, WeeklyReviewResult } from '../../types'
 import type { WeekStats } from '../weekly'
 
 export interface FoodEstimateRequest {
@@ -40,6 +40,14 @@ export interface VideoWorkoutRequest {
   description: string
 }
 
+export interface CoachRequest {
+  /** buildCoachContext が作った「今の状況」テキスト */
+  context: string
+  /** これまでのやり取り（古い順） */
+  history: { role: 'user' | 'coach'; text: string }[]
+  question: string
+}
+
 export interface AiClient {
   estimateFood(req: FoodEstimateRequest, signal?: AbortSignal): Promise<FoodEstimate>
   estimateFoodFromText(req: FoodTextRequest, signal?: AbortSignal): Promise<FoodEstimate>
@@ -52,6 +60,8 @@ export interface AiClient {
   classifyExercise(req: ExerciseClassifyRequest, signal?: AbortSignal): Promise<ExerciseClassification>
   /** 筋トレ動画の URL（＋タイトル・説明欄）からメニューを読み取る */
   parseWorkoutVideo(req: VideoWorkoutRequest, signal?: AbortSignal): Promise<ParsedWorkoutResult>
+  /** 実データを踏まえて食事・トレの相談に答える */
+  askCoach(req: CoachRequest, signal?: AbortSignal): Promise<CoachAnswer>
 }
 
 export interface AiClientConfig {

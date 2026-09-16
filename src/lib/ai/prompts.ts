@@ -216,3 +216,65 @@ export function videoUserPrompt(url: string, title: string, description: string,
   if (description.trim()) lines.push(`説明欄・チャプター:\n${description.trim()}`)
   return lines.join('\n')
 }
+
+/** AI コーチに渡す会話履歴の上限（往復数） */
+export const MAX_HISTORY_TURNS = 6
+
+const CoachMealIdeaSchema = z.object({
+  name: z.string().describe('料理名（日本語）。そのままフード名になるので20文字以内'),
+  howTo: z.string().describe('作り方・買い方を1〜2文で（日本語）。コンビニやレンジで済むならその手順を書く'),
+  unitLabel: z.string().describe('1単位の表示ラベル。例: 1人前, 1皿, 1個'),
+  kcal: z.number().describe('1単位あたりのカロリー kcal（0 以上）'),
+  protein: z.number().describe('1単位あたりのタンパク質 g（0 以上）'),
+  fat: z.number().describe('1単位あたりの脂質 g（0 以上）'),
+  carbs: z.number().describe('1単位あたりの炭水化物 g（0 以上）'),
+  reason: z.string().describe('なぜ今のこの人に合うかを1文で（日本語）。渡された実データを根拠にする'),
+})
+
+const CoachWorkoutItemSchema = z.object({
+  name: z.string().describe('種目名（日本語。一般的な呼び方に正規化する）'),
+  sets: z.number().int().min(1).max(20).describe('セット数'),
+  reps: z.number().int().min(0).max(500).describe('1セットの回数。時間種目なら 0'),
+  seconds: z.number().int().min(0).max(3600).describe('1セットの秒数。回数種目なら 0'),
+  ...ExerciseFieldsSchema,
+})
+
+export const CoachAnswerSchema = z.object({
+  summary: z.string().describe('今の状況の読み取りを1〜2文で（日本語）。渡されたデータの数字を1つ以上入れる'),
+  advice: z.array(z.string()).describe('今日から実行できる行動を2〜4個、各1文で（日本語）'),
+  mealIdeas: z.array(CoachMealIdeaSchema).describe('料理の提案。0〜4件。相談内容が食事に関係なければ空配列'),
+  hasWorkoutIdea: z.boolean().describe('トレーニングメニューを提案するなら true。食事だけの相談なら false'),
+  workoutIdea: z
+    .object({
+      name: z.string().describe('メニュー名（20文字以内、日本語）。hasWorkoutIdea が false なら空文字'),
+      items: z.array(CoachWorkoutItemSchema).describe('種目の一覧。hasWorkoutIdea が false なら空配列'),
+    })
+    .describe('トレーニングメニューの提案'),
+  followUps: z.array(z.string()).describe('次に聞くとよい質問を2〜3個（日本語、20文字程度の短文）'),
+})
+
+export const COACH_ANSWER_JSON_SCHEMA = z.toJSONSchema(CoachAnswerSchema)
+
+export const COACH_SYSTEM_PROMPT = `あなたは自宅で自重トレーニングをする人の専属コーチ兼管理栄養士です。相談に対して、渡された実データを根拠に具体的に答えます。
+- 【今の状況】の数字・品名・種目を必ず根拠にし、一般論だけで答えない。summary にはその数字を入れる
+- ユーザーの要望（簡単・安い・コンビニで済ませたい・時間がないなど）を最優先する。要望に反する提案はしない
+- mealIdeas は日本のスーパー・コンビニで手に入る材料だけで作れるものにし、作り方は1〜2文で済むものだけを挙げる
+- 栄養値は1人前（unitLabel の1単位）あたりの現実的な推定値にする
+- トレーニングの提案は、器具なしで家でできる自重種目に限る。今の部位別セット数の偏りを埋めるように組む
+- 消費カロリーは目安（誤差 ±30%）として扱い、それだけを根拠に食事量を決めさせない
+- 記録が少ないときは、推測を断定にするより、まず何を記録すればよいかを advice に含める
+- 専門用語を避け、口語で親しみやすく。出力はすべて日本語`
+
+const COACH_ROLE_LABEL = { user: 'ユーザー', coach: 'コーチ' } as const
+
+export function coachUserPrompt(context: string, history: { role: 'user' | 'coach'; text: string }[], question: string): string {
+  const blocks = [`【今の状況】\n${context}`]
+  // 1 往復 = user + coach の 2 ターン
+  const recent = history.slice(-MAX_HISTORY_TURNS * 2)
+  if (recent.length > 0) {
+    const lines = recent.map((h) => `${COACH_ROLE_LABEL[h.role]}: ${h.text}`).join('\n')
+    blocks.push(`【これまでのやり取り】\n${lines}`)
+  }
+  blocks.push(`【今回の相談】\n${question.trim()}`)
+  return blocks.join('\n\n')
+}

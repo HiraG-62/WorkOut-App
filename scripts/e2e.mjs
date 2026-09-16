@@ -373,6 +373,41 @@ try {
     confidence: 'medium',
     note: 'モックの読み取り結果です',
   }
+  const mockCoach = {
+    summary: '直近14日で食事の記録は3日、タンパク質は1日平均で目標の6割にとどまっています。',
+    advice: ['朝にゆで卵を2個足す', '夜の主食を半分にして豆腐を1丁足す'],
+    mealIdeas: [
+      {
+        name: 'レンジ蒸し鶏とブロッコリー',
+        howTo: 'コンビニのサラダチキンを割いて、冷凍ブロッコリーと一緒にレンジで2分。',
+        unitLabel: '1人前',
+        kcal: 230,
+        protein: 34,
+        fat: 6,
+        carbs: 8,
+        reason: 'タンパク質が足りていないので、1工程で30g足せます',
+      },
+      {
+        name: '納豆キムチ丼',
+        howTo: 'ごはんに納豆とキムチをのせるだけ。',
+        unitLabel: '1杯',
+        kcal: 420,
+        protein: 18,
+        fat: 8,
+        carbs: 66,
+        reason: '夜の記録が多いので、手早く作れる主食にしました',
+      },
+    ],
+    hasWorkoutIdea: true,
+    workoutIdea: {
+      name: '時短 全身メニュー',
+      items: [
+        { name: 'スクワット', sets: 3, reps: 15, seconds: 0, type: 'reps', bodyPart: 'legs', useWeight: false, formFamily: 'squat', met: 5 },
+        { name: 'ヒップリフト', sets: 3, reps: 15, seconds: 0, type: 'reps', bodyPart: 'legs', useWeight: false, formFamily: 'glute_bridge', met: 3 },
+      ],
+    },
+    followUps: ['コンビニだけで揃う献立は？', '週3日に増やすなら何をする？'],
+  }
   const mockOpenAi = (req) => {
     if (req.url().startsWith('https://noembed.com/')) {
       req.respond({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ title: '【10分】全身自重トレ' }) })
@@ -383,7 +418,17 @@ try {
       const body = req.postData() ?? ''
       const isLabel = body.includes('nutrition_label')
       const isWeekly = body.includes('weekly_review')
-      const content = body.includes('exercise_classification') ? mockClassify : body.includes('video_workout') ? mockVideo : isWeekly ? mockWeekly : isLabel ? mockLabel : mockEstimate
+      const content = body.includes('coach_answer')
+        ? mockCoach
+        : body.includes('exercise_classification')
+          ? mockClassify
+          : body.includes('video_workout')
+            ? mockVideo
+            : isWeekly
+              ? mockWeekly
+              : isLabel
+                ? mockLabel
+                : mockEstimate
       req.respond({
         status: 200,
         contentType: 'application/json',
@@ -497,6 +542,90 @@ try {
   await sleep(600)
   const importedRow = await page.$$eval('.rs__item', (els) => els.map((e) => e.textContent ?? ''))
   assert(importedRow.some((t) => t.includes('10分 全身自重') && t.includes('ベアクロール 3×30秒')), `取り込んだメニューが一覧に出る (${importedRow.join('|')})`)
+
+  // 8h. AI コーチ: ホームから相談 → 料理の提案を今日に記録 → 追加質問 → メニュー保存
+  await page.goto(BASE, { waitUntil: 'networkidle0' })
+  await sleep(500)
+  await clickText('相談する')
+  await sleep(400)
+  await page.waitForSelector('.co__log', { timeout: 4000 })
+  await shot('coach-empty')
+  await clickText('簡単でバランスの良い献立')
+  await page.waitForSelector('.co__answer', { timeout: 8000 })
+  const coachSummary = await textOf('.co__summary')
+  assert(coachSummary.includes('タンパク質は1日平均で目標の6割'), `AI コーチの回答が表示される (${coachSummary})`)
+  const coachAdvice = await page.$$eval('.co__advice li', (els) => els.length)
+  assert(coachAdvice === 2, `アドバイスが2件出る (${coachAdvice})`)
+  const coachIdeas = await page.$$eval('.co__idea', (els) => els.length)
+  assert(coachIdeas === 2, `料理の提案が2件出る (${coachIdeas})`)
+  await shot('coach-answer')
+  await clickText('登録して今日に記録')
+  await sleep(700)
+  const coachIdeaDone = await page.$$eval('.co__idea', (els) => els[0]?.textContent?.includes('登録済み') ?? false)
+  assert(coachIdeaDone, '記録した料理の提案が「登録済み」になる')
+  // followUp チップで会話を続ける（回答カードが 2 枚になるまで待つ）
+  await clickText('コンビニだけで揃う献立は？')
+  await sleep(300)
+  await page.waitForFunction(() => document.querySelectorAll('.co__answer').length === 2, { timeout: 8000 })
+  const coachBubbles = await page.$$eval('.co__bubble--user', (els) => els.length)
+  assert(coachBubbles === 2, `追加質問で会話が2往復になる (${coachBubbles})`)
+  await shot('coach-followup')
+  // 2 ターン目のトレメニューの提案を保存
+  await clickText('メニューとして保存', { index: 1 })
+  await sleep(700)
+  const coachWorkoutDone = await page.$$eval('.co__workout', (els) => els[1]?.textContent?.includes('保存済み') ?? false)
+  assert(coachWorkoutDone, '保存したトレメニューの提案が「保存済み」になる')
+  // 過去の相談一覧 → 同じスレッドを開き直す
+  await clickLabel('過去の相談')
+  await sleep(400)
+  const coachThreads = await page.$$eval('.co__thread', (els) => els.length)
+  assert(coachThreads === 1, `過去の相談にスレッドが1件ある (${coachThreads})`)
+  const coachThreadMeta = await textOf('.co__thread-meta')
+  assert(coachThreadMeta.includes('ChatGPT') && coachThreadMeta.includes('今日'), `相談一覧にプロバイダと日付が出る (${coachThreadMeta})`)
+  await shot('coach-threads')
+  await clickText('簡単でバランスの良い献立')
+  await sleep(500)
+  const coachHistoryClosed = (await page.$('.co__thread')) === null
+  assert(coachHistoryClosed, 'スレッドを選ぶと過去の相談が閉じる')
+  await clickLabel('閉じる')
+  await sleep(400)
+  // 読み込み直しても登録済み/保存済みが残る（ターンに書き戻して保存している）
+  await page.goto(BASE, { waitUntil: 'networkidle0' })
+  await sleep(500)
+  await clickText('前回:')
+  await sleep(600)
+  await page.waitForSelector('.co__answer', { timeout: 4000 })
+  const coachStillDone = await page.$$eval('.co__idea', (els) => els[0]?.textContent?.includes('登録済み') ?? false)
+  assert(coachStillDone, '読み込み直しても料理の提案が「登録済み」のまま')
+  const coachStillSaved = await page.$$eval('.co__workout', (els) => els[1]?.textContent?.includes('保存済み') ?? false)
+  assert(coachStillSaved, '読み込み直してもトレメニューの提案が「保存済み」のまま')
+  // 開いているスレッドを消して取り消すと、会話が戻る
+  await clickLabel('過去の相談')
+  await sleep(400)
+  await clickLabel('簡単でバランスの良い献立 を消す')
+  await sleep(400)
+  const coachAfterDelete = await page.$$eval('.co__thread', (els) => els.length)
+  assert(coachAfterDelete === 0, `相談を消すと一覧から消える (${coachAfterDelete})`)
+  await clickText('元に戻す')
+  await sleep(600)
+  const coachRestored = await page.$$eval('.co__thread', (els) => els.length)
+  assert(coachRestored === 1, `取り消すと相談が一覧に戻る (${coachRestored})`)
+  await clickText('簡単でバランスの良い献立')
+  await sleep(500)
+  const coachAnswersBack = await page.$$eval('.co__answer', (els) => els.length)
+  assert(coachAnswersBack === 2, `取り消した相談の会話が戻る (${coachAnswersBack})`)
+  await clickLabel('閉じる')
+  await sleep(400)
+  // 提案から登録した料理が今日の記録に入っている
+  await page.goto(`${BASE}#/meals`, { waitUntil: 'networkidle0' })
+  await sleep(500)
+  const coachMealLogged = await page.$$eval('.mel__row', (els) => els.some((e) => e.textContent?.includes('レンジ蒸し鶏')))
+  assert(coachMealLogged, 'コーチの提案から登録した料理が今日の記録に入る')
+  // 提案から保存したメニューがトレページに出る
+  await page.goto(`${BASE}#/workout`, { waitUntil: 'networkidle0' })
+  await sleep(500)
+  const coachRoutines = await page.$$eval('.rs__item', (els) => els.map((e) => e.textContent ?? ''))
+  assert(coachRoutines.some((t) => t.includes('時短 全身メニュー') && t.includes('スクワット 3×15回')), `コーチの提案から保存したメニューが一覧に出る (${coachRoutines.join('|')})`)
 
   // 8e. 記録タブ: 週の振り返り → AI の一言 → 目標提案を反映
   await page.goto(`${BASE}#/log`, { waitUntil: 'networkidle0' })

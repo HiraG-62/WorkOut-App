@@ -1,6 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { ExerciseClassification, FoodEstimate, NutritionLabel, ParsedWorkoutResult, TargetSuggestion, WeeklyReviewResult } from '../../types'
+import type { CoachAnswer, ExerciseClassification, FoodEstimate, NutritionLabel, ParsedWorkoutResult, TargetSuggestion, WeeklyReviewResult } from '../../types'
 import {
+  COACH_ANSWER_JSON_SCHEMA,
+  COACH_SYSTEM_PROMPT,
+  coachUserPrompt,
   FOOD_ESTIMATE_JSON_SCHEMA,
   FOOD_SYSTEM_PROMPT,
   FOOD_TEXT_SYSTEM_PROMPT,
@@ -27,6 +30,7 @@ import {
   WEEKLY_SYSTEM_PROMPT,
   WeeklyReviewSchema,
   weeklyUserPrompt,
+  CoachAnswerSchema,
 } from './prompts'
 import {
   AiError,
@@ -39,6 +43,7 @@ import {
   type WeeklyReviewRequest,
   type ExerciseClassifyRequest,
   type VideoWorkoutRequest,
+  type CoachRequest,
 } from './types'
 
 const MAX_TOKENS = 4096
@@ -173,6 +178,13 @@ export function createClaudeClient(config: AiClientConfig): AiClient {
       const parsed = ParsedWorkoutSchema.safeParse(raw)
       if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
       return { ...parsed.data, watched: false }
+    },
+
+    async askCoach(req: CoachRequest, signal?: AbortSignal): Promise<CoachAnswer> {
+      const raw = await callJson(COACH_SYSTEM_PROMPT, [{ type: 'text', text: coachUserPrompt(req.context, req.history, req.question) }], COACH_ANSWER_JSON_SCHEMA, signal)
+      const parsed = CoachAnswerSchema.safeParse(raw)
+      if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
+      return parsed.data
     },
   }
 }

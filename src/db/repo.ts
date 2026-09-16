@@ -1,7 +1,7 @@
 import { db, DEFAULT_SETTINGS } from './db'
 import { newId } from '../lib/id'
 import { fromDateKey, timeSlot, todayKey } from '../lib/date'
-import type { Exercise, ExerciseType, Food, MealEntry, MealSet, Routine, RoutineItem, Settings, WeeklyReview, WeightEntry, Workout, WorkoutSet } from '../types'
+import type { CoachThread, Exercise, ExerciseType, Food, MealEntry, MealSet, Routine, RoutineItem, Settings, WeeklyReview, WeightEntry, Workout, WorkoutSet } from '../types'
 
 // ---------- Settings ----------
 
@@ -437,6 +437,28 @@ export function routineItemsFromSets(exerciseIds: string[], sets: WorkoutSet[], 
         : { exerciseId, sets: own.length, reps: last.reps ?? DEFAULT_PLAN_REPS },
     ]
   })
+}
+
+// ---------- Coach（AI コーチの相談スレッド） ----------
+
+/** 残しておく相談スレッドの上限 */
+export const MAX_COACH_THREADS = 20
+
+export async function putCoachThread(t: CoachThread): Promise<void> {
+  await db.coachThreads.put(t)
+}
+
+export async function deleteCoachThread(id: string): Promise<void> {
+  await db.coachThreads.delete(id)
+}
+
+/** 古いスレッドを整理して MAX_COACH_THREADS 件に保つ */
+export async function pruneCoachThreads(): Promise<void> {
+  const count = await db.coachThreads.count()
+  if (count <= MAX_COACH_THREADS) return
+  // updatedAt の古い順に、上限を超えた分だけ消す
+  const old = await db.coachThreads.orderBy('updatedAt').limit(count - MAX_COACH_THREADS).primaryKeys()
+  await db.coachThreads.bulkDelete(old)
 }
 
 export const DEFAULT_PLAN_REPS = 10

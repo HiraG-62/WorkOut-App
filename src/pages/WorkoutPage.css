@@ -170,3 +170,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.wp__coach {
+  align-self: flex-start;
+  margin-top: calc(-1 * var(--s-3));
+}

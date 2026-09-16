@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronRight, Dumbbell, ListPlus, Play, Plus, Repeat } from 'lucide-react'
+import { ChevronRight, Dumbbell, ListPlus, MessageCircleHeart, Play, Plus, Repeat } from 'lucide-react'
 import { db } from '../db/db'
 import { createWorkout } from '../db/repo'
 import { formatDuration, formatRelative } from '../lib/date'
@@ -14,6 +14,9 @@ import { Button } from '../components/ui/Button'
 import { ExercisePickerSheet } from '../features/workout/ExercisePickerSheet'
 import { useRecentExerciseIds } from '../features/workout/useRecentExerciseIds'
 import { RoutinesSection } from '../features/routine/RoutinesSection'
+import { CoachSheet } from '../features/coach/CoachSheet'
+import { isAiConfigured } from '../lib/ai'
+import { useSettings } from '../hooks/useSettings'
 import { summarizeSets } from '../features/workout/useWorkoutStats'
 import { useWeightKg } from '../features/workout/useDayBurn'
 import { estimateBurnKcal } from '../lib/calories'
@@ -25,6 +28,7 @@ export function WorkoutPage() {
   const navigate = useNavigate()
   const today = useToday()
   const guard = useBusy()
+  const settings = useSettings()
   const weightKg = useWeightKg()
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(HISTORY_LIMIT).toArray(), [])
   const exerciseList = useLiveQuery(() => db.exercises.toArray(), [])
@@ -32,6 +36,7 @@ export function WorkoutPage() {
   const recentIds = useRecentExerciseIds()
   const [searchParams, setSearchParams] = useSearchParams()
   const [pickerOpen, setPickerOpen] = useState(searchParams.get('pick') === '1')
+  const [coachOpen, setCoachOpen] = useState(false)
   const closePicker = () => {
     setPickerOpen(false)
     if (searchParams.has('pick')) setSearchParams({}, { replace: true })
@@ -120,6 +125,12 @@ export function WorkoutPage() {
 
       <RoutinesSection exercises={exerciseList} canStart={!todayWorkout || !!todayWorkout.endedAt} />
 
+      {isAiConfigured(settings.ai) && (
+        <Button variant="ghost" icon={<MessageCircleHeart size={18} aria-hidden />} onClick={() => setCoachOpen(true)} className="wp__coach">
+          AI にメニューを相談
+        </Button>
+      )}
+
       {(history.length > 0 || workouts.length === 0) && (
       <Section title="履歴">
         {history.length === 0 ? (
@@ -147,6 +158,8 @@ export function WorkoutPage() {
         )}
       </Section>
       )}
+
+      <CoachSheet open={coachOpen} onClose={() => setCoachOpen(false)} date={today} initialQuestion="今のトレの状況に合うメニューを提案して" />
 
       <ExercisePickerSheet open={pickerOpen} onClose={closePicker} exercises={exerciseList} selectedIds={[]} recentIds={recentIds} onConfirm={(ids) => void startWith(ids)} confirmLabel="選んで開始" />
     </div>

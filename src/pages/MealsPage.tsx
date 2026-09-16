@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { PhotoPickers, usePhotoPicker } from '../features/meals/PhotoPickers'
-import { Camera, ChevronLeft, ChevronRight, CopyPlus, Layers, MessageSquareText, ScanText, Search, UtensilsCrossed, Zap } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, CopyPlus, Layers, MessageCircleHeart, MessageSquareText, ScanText, Search, UtensilsCrossed, Zap } from 'lucide-react'
 import { copyMeals, uncopyMeals } from '../db/repo'
 import { addDays, formatRelative } from '../lib/date'
 import { useToday } from '../hooks/useToday'
@@ -24,12 +24,13 @@ import { QuickMealSheet } from '../features/meals/QuickMealSheet'
 import { AiMealSheet } from '../features/meals/AiMealSheet'
 import { NutritionLabelSheet } from '../features/meals/NutritionLabelSheet'
 import { MealSetsSheet } from '../features/meals/MealSetsSheet'
+import { CoachSheet } from '../features/coach/CoachSheet'
 import './MealsPage.css'
 
 const QUICK_LIMIT = 6
 const UNDO_MS = 6000
 
-type SheetKind = 'picker' | 'form' | 'quick' | 'photo' | 'talk' | 'label' | 'sets' | null
+type SheetKind = 'picker' | 'form' | 'quick' | 'photo' | 'talk' | 'label' | 'sets' | 'coach' | null
 
 export function MealsPage() {
   const settings = useSettings()
@@ -104,6 +105,9 @@ export function MealsPage() {
             <Button variant="accent-soft" icon={<ScanText size={18} aria-hidden />} onClick={label.open}>
               成分表を撮る
             </Button>
+            <Button variant="accent-soft" icon={<MessageCircleHeart size={18} aria-hidden />} onClick={() => setSheet('coach')}>
+              相談
+            </Button>
           </>
         )}
         <Button variant={aiReady ? 'secondary' : 'primary'} icon={<Zap size={18} aria-hidden />} onClick={() => setSheet('quick')}>
@@ -148,6 +152,7 @@ export function MealsPage() {
       <AiMealSheet open={sheet === 'talk'} onClose={() => setSheet(null)} date={date} mode="text" />
       <NutritionLabelSheet open={sheet === 'label'} onClose={() => setSheet(null)} date={date} initialFile={labelFile} />
       <MealSetsSheet open={sheet === 'sets'} onClose={() => setSheet(null)} date={date} todayEntries={entries} />
+      <CoachSheet open={sheet === 'coach'} onClose={() => setSheet(null)} date={date} initialQuestion="今の食事をバランスよくする、簡単な料理を教えて" />
     </div>
   )
 }

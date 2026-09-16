@@ -1,0 +1,365 @@
+.co__top {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+
+.co__provider {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.co__history-btn {
+  width: var(--tap);
+  height: var(--tap);
+  flex-shrink: 0;
+  border-radius: var(--r-full);
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.co__history-btn:active {
+  background: var(--surface-3);
+}
+
+.co__log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  align-items: flex-start;
+}
+
+.co__starters {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4) 0;
+}
+
+.co__starter-lead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.co__starter-lead svg {
+  color: var(--accent);
+}
+
+.co__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.co__chip {
+  min-height: var(--tap);
+  padding: 0 var(--s-4);
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 14px;
+  text-align: left;
+}
+
+.co__chip:active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.co__chip:disabled {
+  opacity: 0.4;
+}
+
+.co__bubble {
+  max-width: 85%;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.co__bubble--user {
+  align-self: flex-end;
+  background: var(--accent-dim);
+  color: var(--text);
+  border-bottom-right-radius: var(--s-1);
+}
+
+.co__answer {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.co__summary {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.co__advice {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.co__advice li {
+  position: relative;
+  padding-left: var(--s-4);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-2);
+}
+
+.co__advice li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--accent);
+}
+
+.co__ideas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.co__idea-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.06em;
+}
+
+.co__idea-head svg {
+  color: var(--accent);
+}
+
+.co__idea,
+.co__workout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.co__idea-name {
+  font-weight: 700;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.co__idea-how,
+.co__idea-reason {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-2);
+}
+
+.co__idea-reason {
+  color: var(--text-3);
+}
+
+.co__idea-pfc {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.co__idea-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.co__done {
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.co__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.co__items li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+  font-size: 14px;
+}
+
+.co__item-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.co__item-target {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.co__thinking {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 14px;
+  color: var(--text-2);
+}
+
+.co__spinner {
+  color: var(--accent);
+  animation: co-spin 1s linear infinite;
+}
+
+@keyframes co-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .co__spinner {
+    animation: none;
+  }
+}
+
+.co__error {
+  color: var(--danger);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.co__form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-2);
+}
+
+.co__input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  /* 最大高さは CoachSheet.tsx の INPUT_MAX_HEIGHT_PX から inline style で入る */
+  resize: none;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+}
+
+.co__input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+.co__input:disabled {
+  opacity: 0.5;
+}
+
+.co__empty {
+  font-size: 14px;
+  padding: var(--s-4) 0;
+}
+
+.co__threads {
+  list-style: none;
+  margin: 0 0 var(--s-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.co__thread {
+  display: flex;
+  align-items: stretch;
+  gap: var(--s-2);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.co__thread-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  padding: var(--s-3);
+  text-align: left;
+  color: inherit;
+}
+
+.co__thread-body:active {
+  background: var(--surface-3);
+}
+
+.co__thread-title {
+  font-weight: 700;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.co__thread-meta {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.co__thread-del {
+  width: var(--tap);
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+  background: transparent;
+}
+
+.co__thread-del:active {
+  color: var(--danger);
+}

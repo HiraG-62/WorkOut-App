@@ -157,3 +157,44 @@
 .hp__meal-actions:empty {
   display: none;
 }
+
+.hp__coach {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.hp__coach-lead {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+.hp__coach-last {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 13px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp__coach-last:active {
+  background: var(--surface-3);
+}
+
+.hp__coach-last-label {
+  color: var(--text-3);
+}
+
+.hp__coach-note {
+  font-size: 12px;
+  text-align: center;
+}

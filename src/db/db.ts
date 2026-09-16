@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type {
+  CoachThread,
   Exercise,
   Food,
   MealEntry,
@@ -41,6 +42,7 @@ class WorkoutDB extends Dexie {
   settings!: EntityTable<Settings, 'id'>
   weeklyReviews!: EntityTable<WeeklyReview, 'id'>
   routines!: EntityTable<Routine, 'id'>
+  coachThreads!: EntityTable<CoachThread, 'id'>
 
   constructor() {
     super('workout-app')
@@ -93,6 +95,8 @@ class WorkoutDB extends Dexie {
             if (!ex.isCustom && part !== undefined) ex.bodyPart = part
           })
       })
+    // v6: AI コーチの相談スレッド
+    this.version(6).stores({ coachThreads: 'id, updatedAt' })
     this.on('populate', () => {
       void this.exercises.bulkAdd(SEED_EXERCISES)
       void this.settings.add(DEFAULT_SETTINGS)

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowUpRight, Check, CopyCheck, MoreHorizontal, Play, Square, Trash2 } from 'lucide-react'
+import { ArrowUpRight, Check, MoreHorizontal, Play, Square, Trash2 } from 'lucide-react'
 import { addSet, deleteSet, getLastSetsForExercise, removeExerciseFromWorkout, restoreExerciseToWorkout, setWorkoutExercises, updateSet } from '../../db/repo'
 import { db } from '../../db/db'
 import { tapHaptic, unlockAudio } from '../../lib/feedback'
@@ -121,12 +121,6 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
       await record(s, true)
     })
 
-  const completeRemaining = () =>
-    guard(async () => {
-      for (const s of planned.slice(done)) await record(s, false)
-      tapHaptic()
-    })
-
   const removeFromWorkout = () =>
     guard(async () => {
       setMenuOpen(false)
@@ -210,10 +204,10 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
         {!readOnly &&
           remainingPlanned.map((s, i) => (
             <li key={`p${i}`}>
-              <button type="button" className="xb__set xb__set--ghost" onClick={() => void completePlanned(s)} aria-label={`セット${done + i + 1}を前回と同じ ${formatSet(s, exercise)} で完了`}>
+              <button type="button" className="xb__set xb__set--ghost" onClick={() => void completePlanned(s)} aria-label={`セット${done + i + 1}を前回と同じ ${formatSet(s, exercise)} で記録`}>
                 <span className="xb__set-no">{done + i + 1}</span>
                 <span className="display xb__set-val">{formatSet(s, exercise)}</span>
-                <span className="xb__set-hint">タップで完了</span>
+                <span className="xb__set-hint">タップで記録</span>
               </button>
             </li>
           ))}
@@ -259,13 +253,6 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
             </button>
           )}
         </>
-      )}
-
-      {!readOnly && timing === null && remainingPlanned.length > 0 && (
-        <button type="button" className="xb__bulk xb__bulk--copy" onClick={() => void completeRemaining()}>
-          <CopyCheck size={18} aria-hidden />
-          前回と同じで残り{remainingPlanned.length}セット完了
-        </button>
       )}
 
       <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title={exercise.name}>

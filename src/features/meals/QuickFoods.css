@@ -6,9 +6,9 @@
 
 .qf__chip {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
   min-height: 60px;
   padding: var(--s-3) var(--s-3);
   background: var(--surface-2);
@@ -27,6 +27,18 @@
   border-color: var(--accent);
 }
 
+.qf__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.qf__plus {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
 .qf__name {
   font-weight: 600;
   font-size: 15px;
@@ -39,10 +51,6 @@
 .qf__meta {
   font-size: 12px;
   color: var(--text-2);
-}
-
-.qf > :only-child {
-  grid-column: 1 / -1;
 }
 
 .qf__chip--add,

@@ -29,11 +29,14 @@ export function QuickFoods({ foods, date, limit, onMore, onAdd }: QuickFoodsProp
   return (
     <div className="qf">
       {shown.map((f) => (
-        <button key={f.id} type="button" className="qf__chip" onClick={() => void handleTap(f)}>
-          <span className="qf__name">{f.name}</span>
-          <span className="qf__meta">
-            <span className="num">{f.kcal}</span> kcal · P<span className="num">{f.protein}</span>
+        <button key={f.id} type="button" className="qf__chip" onClick={() => void handleTap(f)} aria-label={`${f.name} を記録`}>
+          <span className="qf__body">
+            <span className="qf__name">{f.name}</span>
+            <span className="qf__meta">
+              <span className="num">{f.kcal}</span> kcal · P<span className="num">{f.protein}</span>
+            </span>
           </span>
+          <Plus size={18} className="qf__plus" aria-hidden />
         </button>
       ))}
       {onAdd && (

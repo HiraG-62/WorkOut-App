@@ -10,11 +10,17 @@ import './QuickMealSheet.css'
 
 const KCAL_STEP = 50
 const KCAL_MAX = 5000
-const KCAL_PRESETS = [300, 500, 700, 1000] as const
+const PRESETS = [
+  { kcal: 300, protein: 15 },
+  { kcal: 500, protein: 25 },
+  { kcal: 700, protein: 35 },
+  { kcal: 1000, protein: 45 },
+] as const
+const PROTEIN_PRESETS = [20, 30, 40, 50] as const
 const G_STEP = 5
 const G_MAX = 500
 const DEFAULT_KCAL = 500
-const DEFAULT_PROTEIN = 20
+const DEFAULT_PROTEIN = 25
 const DEFAULT_NAME = 'ざっくり記録'
 const UNDO_MS = 5000
 
@@ -71,24 +77,41 @@ export function QuickMealSheet({ open, onClose, date }: QuickMealSheetProps) {
         }}
       >
         <p className="muted qm__lead">細かいことは気にせず、目安だけ残しておきましょう。</p>
-        <div className="qm__presets" role="group" aria-label="カロリーの目安">
-          {KCAL_PRESETS.map((k) => (
+        <div className="qm__presets" role="group" aria-label="カロリーとタンパク質の目安">
+          {PRESETS.map((p) => (
             <button
-              key={k}
+              key={p.kcal}
               type="button"
-              className={`qm__preset ${kcal === k ? 'qm__preset--on' : ''}`}
+              className={`qm__preset ${kcal === p.kcal ? 'qm__preset--on' : ''}`}
               onClick={() => {
                 tapHaptic()
-                setKcal(k)
+                setKcal(p.kcal)
+                setProtein(p.protein)
               }}
             >
-              {k}
+              <span className="num">{p.kcal}</span>
+              <span className="qm__preset-sub">P{p.protein}</span>
             </button>
           ))}
         </div>
         <div className="qm__grid">
           <Stepper value={kcal} onChange={setKcal} step={KCAL_STEP} max={KCAL_MAX} unit="kcal" label="カロリー" size="lg" />
           <Stepper value={protein} onChange={setProtein} step={G_STEP} max={G_MAX} unit="g" label="タンパク質" />
+          <div className="qm__presets qm__presets--mini" role="group" aria-label="タンパク質の目安">
+            {PROTEIN_PRESETS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                className={`qm__preset qm__preset--mini ${protein === p ? 'qm__preset--on' : ''}`}
+                onClick={() => {
+                  tapHaptic()
+                  setProtein(p)
+                }}
+              >
+                P{p}
+              </button>
+            ))}
+          </div>
         </div>
         {detail ? (
           <div className="qm__grid qm__grid--pair">

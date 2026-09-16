@@ -20,6 +20,34 @@
   transition: background-color var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
 }
 
+.qm__preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+  gap: 1px;
+}
+
+.qm__preset-sub {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.qm__preset--on .qm__preset-sub {
+  color: var(--accent);
+}
+
+.qm__presets--mini {
+  width: 100%;
+  max-width: 320px;
+}
+
+.qm__preset--mini {
+  min-height: 36px;
+  font-size: 14px;
+}
+
 .qm__preset--on {
   background: var(--accent-dim);
   border-color: var(--accent);

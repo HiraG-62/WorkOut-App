@@ -263,21 +263,6 @@
   background: var(--accent-dim);
 }
 
-/* このアプリで最も摩擦を減らすボタン。目立たせる */
-.xb__bulk--copy {
-  min-height: 48px;
-  background: var(--accent-dim);
-  color: var(--accent);
-  border: 1px dashed var(--accent);
-  border-radius: var(--r-md);
-  font-size: 15px;
-}
-
-.xb__bulk--copy:active {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
 .xb__hint {
   font-size: 12px;
   text-align: center;

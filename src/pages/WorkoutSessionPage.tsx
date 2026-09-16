@@ -21,6 +21,8 @@ import type { WorkoutSet } from '../types'
 import './WorkoutSessionPage.css'
 
 const CLOCK_TICK_MS = 1000
+/** 残り 1 セットならゴースト行のタップと同じなので一括ボタンは出さない */
+const MIN_REMAINING_FOR_BULK = 2
 
 export function WorkoutSessionPage() {
   const { id = '' } = useParams()
@@ -154,10 +156,10 @@ export function WorkoutSessionPage() {
         )}
       </div>
 
-      {!readOnly && remainingAll.length > 0 && (
+      {!readOnly && remainingAll.length >= MIN_REMAINING_FOR_BULK && (
         <button type="button" className="ws__all" onClick={() => void completeAllRemaining()}>
           <CopyCheck size={18} aria-hidden />
-          全種目を前回と同じで記録（残り{remainingAll.length}セット）
+          前回と同じで一括記録（残り{remainingAll.length}セット）
         </button>
       )}
 

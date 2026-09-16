@@ -34,6 +34,7 @@ export function WorkoutPage() {
   const todayWorkout = workouts?.find((w) => !w.endedAt) ?? workouts?.find((w) => w.date === today)
   const lastWorkout = workouts?.find((w) => w.id !== todayWorkout?.id)
   const setsOf = (id: string) => (allSets ?? []).filter((s) => s.workoutId === id)
+  const history = (workouts ?? []).filter((w) => w.id !== todayWorkout?.id)
 
   const startFromLast = async () => {
     if (!lastWorkout) return
@@ -63,7 +64,7 @@ export function WorkoutPage() {
       {todayWorkout ? (
         <Card accent className="wp__today" onClick={() => navigate(`/workout/${todayWorkout.id}`)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate(`/workout/${todayWorkout.id}`)}>
           <div className="wp__today-head">
-            <span className="section-title">{todayWorkout.endedAt ? '今日は完了' : '進行中'}</span>
+            <span className="wp__today-title">{todayWorkout.endedAt ? '今日は完了' : '進行中'}</span>
             {todayWorkout.endedAt && <span className="num wp__today-time">{formatDuration(todayWorkout.endedAt - todayWorkout.startedAt)}</span>}
           </div>
           <p className="wp__today-summary">{summarizeSets(setsOf(todayWorkout.id), exercises, todayWorkout.exerciseIds) || '種目未選択'}</p>
@@ -101,12 +102,13 @@ export function WorkoutPage() {
         </div>
       )}
 
+      {(history.length > 0 || workouts.length === 0) && (
       <Section title="履歴">
-        {workouts.length === 0 ? (
+        {history.length === 0 ? (
           <EmptyState icon={<Dumbbell size={24} />} title="まだ記録がありません" description="最初のワークアウトを始めると、次回から「前回と同じ」で一撃で始められます" />
         ) : (
           <ul className="wp__history">
-            {workouts.map((w) => {
+            {history.map((w) => {
               const s = setsOf(w.id)
               return (
                 <li key={w.id}>
@@ -126,6 +128,7 @@ export function WorkoutPage() {
           </ul>
         )}
       </Section>
+      )}
 
       <ExercisePickerSheet open={pickerOpen} onClose={closePicker} exercises={exerciseList} selectedIds={[]} recentIds={recentIds} onConfirm={(ids) => void startWith(ids)} confirmLabel="選んで開始" />
     </div>

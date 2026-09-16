@@ -17,6 +17,7 @@ import { useFoods } from '../features/meals/useFoods'
 import { QuickFoods } from '../features/meals/QuickFoods'
 import { PhotoEstimateSheet } from '../features/meals/PhotoEstimateSheet'
 import { QuickMealSheet } from '../features/meals/QuickMealSheet'
+import { FoodFormSheet } from '../features/meals/FoodFormSheet'
 import { summarizeSets } from '../features/workout/useWorkoutStats'
 import './HomePage.css'
 
@@ -38,6 +39,7 @@ export function HomePage() {
   const todaySets = useLiveQuery(async () => (todayWorkout ? db.sets.where('workoutId').equals(todayWorkout.id).toArray() : []), [todayWorkout?.id])
   const [photoOpen, setPhotoOpen] = useState(false)
   const [quickOpen, setQuickOpen] = useState(false)
+  const [foodFormOpen, setFoodFormOpen] = useState(false)
   const exercises = useMemo(() => new Map((exerciseList ?? []).map((e) => [e.id, e])), [exerciseList])
   const aiReady = isAiConfigured(settings.ai)
 
@@ -142,11 +144,12 @@ export function HomePage() {
             ざっくり記録
           </Button>
         </div>
-        {foods.length > 0 && <QuickFoods foods={foods} date={today} limit={QUICK_LIMIT} onMore={() => navigate('/meals')} />}
+        {foods.length > 0 && <QuickFoods foods={foods} date={today} limit={QUICK_LIMIT} onMore={() => navigate('/meals')} onAdd={() => setFoodFormOpen(true)} />}
       </Section>
 
       <PhotoEstimateSheet open={photoOpen} onClose={() => setPhotoOpen(false)} date={today} />
       <QuickMealSheet open={quickOpen} onClose={() => setQuickOpen(false)} date={today} />
+      <FoodFormSheet open={foodFormOpen} onClose={() => setFoodFormOpen(false)} />
     </div>
   )
 }

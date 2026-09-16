@@ -256,10 +256,10 @@ try {
   await shot('session-prefilled')
   const ghost = await page.$$eval('.xb__set--ghost', (els) => els.length)
   assert(ghost >= 3, `前回のセットがプリセット表示される (${ghost})`)
-  await clickText('前回と同じで残り2セット完了')
-  await sleep(400)
+  await clickText('前回と同じで一括記録')
+  await sleep(500)
   const bulkDone = await page.$$eval('.xb__set--done', (els) => els.length)
-  assert(bulkDone === 2, `一括完了で2セット記録 (${bulkDone})`)
+  assert(bulkDone === 3, `一括記録で3セット記録 (${bulkDone})`)
   await shot('session-bulk-done')
 
   // 種目メニュー → 次のレベル

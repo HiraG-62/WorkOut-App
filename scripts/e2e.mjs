@@ -285,13 +285,26 @@ try {
     confidence: 'high',
     note: 'モックの推定結果です',
   }
+  const mockLabel = {
+    productName: 'サラダチキン プレーン',
+    basis: '1袋(110g)あたり',
+    kcal: 121,
+    protein: 26.4,
+    fat: 1.3,
+    carbs: 0.9,
+    source: 'label',
+    confidence: 'high',
+    note: 'モックの読み取り結果です',
+  }
   const mockOpenAi = (req) => {
     if (req.url().startsWith('https://api.openai.com/')) {
+      // system prompt に「パッケージ」が含まれていれば成分表の読み取り、それ以外は食事の推定
+      const isLabel = (req.postData() ?? '').includes('nutrition_label')
       req.respond({
         status: 200,
         contentType: 'application/json',
         headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' },
-        body: JSON.stringify({ choices: [{ message: { content: JSON.stringify(mockEstimate) } }] }),
+        body: JSON.stringify({ choices: [{ message: { content: JSON.stringify(isLabel ? mockLabel : mockEstimate) } }] }),
       })
       return
     }
@@ -318,6 +331,22 @@ try {
   assert(menuLogged, 'メニューとして登録した1食が今日の記録に入る')
   const menuChip = await page.$$eval('.qf__chip', (els) => els.some((e) => e.textContent?.includes('いつもの夕食')))
   assert(menuChip, '登録したメニューが「よく食べるもの」に出る')
+
+  // 8d. 成分表を撮る → 読み取り結果を登録して記録
+  await clickText('成分表を撮る')
+  await sleep(500)
+  const labelInput = await page.$('input[aria-label="パッケージの写真を選ぶ"]')
+  await labelInput.uploadFile('public/icons/icon-192.png')
+  await sleep(400)
+  await clickText('ChatGPT で読み取る')
+  await page.waitForSelector('.nl__pfc', { timeout: 8000 })
+  const labelName = await page.$eval('.sheet input[placeholder="商品名"]', (e) => e.value)
+  assert(labelName === 'サラダチキン プレーン', `成分表の商品名が入る (${labelName})`)
+  await shot('label-result')
+  await clickText('登録して 1 食分を記録する')
+  await sleep(600)
+  const labelLogged = await page.$$eval('.mel__row', (els) => els.some((e) => e.textContent?.includes('サラダチキン')))
+  assert(labelLogged, '成分表から登録した食品が今日の記録に入る')
   page.off('request', mockOpenAi)
   await page.setRequestInterception(false)
 

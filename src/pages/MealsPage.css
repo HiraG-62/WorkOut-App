@@ -44,3 +44,8 @@
   gap: var(--s-2);
 }
 
+/* 奇数個のときは最後を全幅にして穴を作らない */
+.mp__actions > .btn:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+

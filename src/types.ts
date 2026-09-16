@@ -177,6 +177,21 @@ export interface FoodEstimate {
   note: string
 }
 
+/** 栄養成分表示の読み取り結果 */
+export interface NutritionLabel {
+  productName: string
+  /** 数値の基準。例: 1袋(110g)あたり, 100gあたり, 1本(500ml)あたり */
+  basis: string
+  kcal: number
+  protein: number
+  fat: number
+  carbs: number
+  /** label: 成分表示を読み取った / ingredients: 原材料名と内容量から推定した */
+  source: 'label' | 'ingredients'
+  confidence: 'low' | 'medium' | 'high'
+  note: string
+}
+
 export interface TargetSuggestion extends Targets {
   rationale: string
 }

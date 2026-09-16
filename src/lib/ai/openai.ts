@@ -1,9 +1,13 @@
-import type { FoodEstimate, TargetSuggestion } from '../../types'
+import type { FoodEstimate, NutritionLabel, TargetSuggestion } from '../../types'
 import {
   FOOD_ESTIMATE_JSON_SCHEMA,
   FOOD_SYSTEM_PROMPT,
   FOOD_TEXT_SYSTEM_PROMPT,
   foodTextUserPrompt,
+  LABEL_SYSTEM_PROMPT,
+  NUTRITION_LABEL_JSON_SCHEMA,
+  NutritionLabelSchema,
+  labelUserPrompt,
   FoodEstimateSchema,
   TARGET_SUGGESTION_JSON_SCHEMA,
   TARGET_SYSTEM_PROMPT,
@@ -116,6 +120,21 @@ export function createOpenAiClient(config: AiClientConfig): AiClient {
     async estimateFoodFromText(req: FoodTextRequest, signal?: AbortSignal): Promise<FoodEstimate> {
       const raw = await callJson(FOOD_TEXT_SYSTEM_PROMPT, [{ type: 'text', text: foodTextUserPrompt(req.text) }], 'food_estimate', FOOD_ESTIMATE_JSON_SCHEMA, signal)
       const parsed = FoodEstimateSchema.safeParse(raw)
+      if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
+      return parsed.data
+    },
+
+    async readNutritionLabel(req: FoodEstimateRequest, signal?: AbortSignal): Promise<NutritionLabel> {
+      const raw = await callJson(
+        LABEL_SYSTEM_PROMPT,
+        [
+          { type: 'image_url', image_url: { url: `data:${req.mediaType};base64,${req.imageBase64}`, detail: 'high' } },
+          { type: 'text', text: labelUserPrompt(req.hint) },
+        ],
+        'nutrition_label', NUTRITION_LABEL_JSON_SCHEMA,
+        signal,
+      )
+      const parsed = NutritionLabelSchema.safeParse(raw)
       if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
       return parsed.data
     },

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Sparkles, Trash2 } from 'lucide-react'
+import { ScanText, Sparkles, Trash2 } from 'lucide-react'
 import { addFood, archiveFood, unarchiveFood, updateFood } from '../../db/repo'
 import { useToast } from '../../components/ui/Toast'
 import { useBusy } from '../../hooks/useBusy'
@@ -10,6 +10,7 @@ import { Sheet } from '../../components/ui/Sheet'
 import { TextField } from '../../components/ui/Field'
 import { Button } from '../../components/ui/Button'
 import { AI_PROVIDERS, type Food, type FoodEstimate } from '../../types'
+import { encodeImageForAi } from '../../lib/image'
 import './FoodFormSheet.css'
 
 const DEFAULT_UNIT = '1食'
@@ -71,6 +72,7 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
   /** AI に伝える材料・内容。空なら名前から推定する */
   const [aiText, setAiText] = useState('')
   const abortRef = useRef<AbortController | null>(null)
+  const labelFileRef = useRef<HTMLInputElement>(null)
   const aiReady = isAiConfigured(settings.ai)
 
   useEffect(() => {
@@ -126,6 +128,43 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
     } catch (err) {
       if (controller.signal.aborted && abortRef.current !== controller) return
       setError(controller.signal.aborted ? '時間がかかりすぎたため中断しました' : err instanceof AiError ? err.message : '推定に失敗しました')
+    } finally {
+      window.clearTimeout(timeout)
+      if (abortRef.current === controller) setAiBusy(false)
+    }
+  }
+
+  /** 栄養成分表示の写真から数値を読み取ってフォームに入れる */
+  const fillByLabel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const client = await createAiClient(settings.ai)
+    if (!client) return
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    const timeout = window.setTimeout(() => controller.abort(), AI_TIMEOUT_MS)
+    setAiBusy(true)
+    setError('')
+    setAiNote('')
+    try {
+      const img = await encodeImageForAi(file)
+      const label = await client.readNutritionLabel({ imageBase64: img.base64, mediaType: img.mediaType, hint: '' }, controller.signal)
+      if (controller.signal.aborted) return
+      setD((s) => ({
+        ...s,
+        name: s.name.trim() || (label.productName !== '不明' ? label.productName : ''),
+        unitLabel: label.basis.replace(/あたり.*$/, '') || DEFAULT_UNIT,
+        kcal: String(Math.round(label.kcal)),
+        protein: round1(label.protein),
+        fat: round1(label.fat),
+        carbs: round1(label.carbs),
+      }))
+      setAiNote(`${label.source === 'label' ? '成分表示から読み取り' : '原材料から推定'}（${label.basis}）。${label.note}`)
+    } catch (err) {
+      if (controller.signal.aborted && abortRef.current !== controller) return
+      setError(controller.signal.aborted ? '時間がかかりすぎたため中断しました' : err instanceof AiError ? err.message : '読み取りに失敗しました')
     } finally {
       window.clearTimeout(timeout)
       if (abortRef.current === controller) setAiBusy(false)
@@ -204,9 +243,15 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
               />
               <span className="field__hint">空欄なら名前から推定します</span>
             </label>
-            <Button variant="accent-soft" block icon={<Sparkles size={18} aria-hidden />} onClick={() => void fillByAi()} loading={aiBusy} disabled={!d.name.trim() && !aiText.trim()}>
-              {AI_PROVIDERS[settings.ai.provider].label} に栄養を推定してもらう
-            </Button>
+            <div className="ff__ai-buttons">
+              <Button variant="accent-soft" block icon={<Sparkles size={18} aria-hidden />} onClick={() => void fillByAi()} loading={aiBusy} disabled={!d.name.trim() && !aiText.trim()}>
+                {AI_PROVIDERS[settings.ai.provider].label} に推定してもらう
+              </Button>
+              <Button variant="secondary" block icon={<ScanText size={18} aria-hidden />} onClick={() => labelFileRef.current?.click()} disabled={aiBusy}>
+                成分表・原材料を撮る
+              </Button>
+            </div>
+            <input ref={labelFileRef} type="file" accept="image/*" className="sr-only" onChange={(e) => void fillByLabel(e)} aria-label="栄養成分表示の写真" />
             {aiNote && <p className="ff__ai-note">{aiNote}</p>}
           </div>
         )}

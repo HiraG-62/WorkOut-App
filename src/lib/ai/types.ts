@@ -1,4 +1,4 @@
-import type { FoodEstimate, Profile, TargetSuggestion, Targets } from '../../types'
+import type { FoodEstimate, NutritionLabel, Profile, TargetSuggestion, Targets } from '../../types'
 
 export interface FoodEstimateRequest {
   imageBase64: string
@@ -20,6 +20,8 @@ export interface TargetSuggestionRequest {
 export interface AiClient {
   estimateFood(req: FoodEstimateRequest, signal?: AbortSignal): Promise<FoodEstimate>
   estimateFoodFromText(req: FoodTextRequest, signal?: AbortSignal): Promise<FoodEstimate>
+  /** 栄養成分表示の写真から数値を読み取る */
+  readNutritionLabel(req: FoodEstimateRequest, signal?: AbortSignal): Promise<NutritionLabel>
   suggestTargets(req: TargetSuggestionRequest, signal?: AbortSignal): Promise<TargetSuggestion>
 }
 

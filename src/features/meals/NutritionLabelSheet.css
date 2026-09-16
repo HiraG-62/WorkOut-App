@@ -1,0 +1,38 @@
+.nl__tip {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.nl__tip svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.nl__source {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.nl__pfc {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.nl__pfc .field__control input {
+  padding-right: 28px;
+  padding-left: var(--s-2);
+}
+
+.nl__pfc .field__suffix {
+  right: var(--s-2);
+}
+
+.nl__qty {
+  display: flex;
+  justify-content: center;
+  padding: var(--s-2) 0;
+}

@@ -25,6 +25,18 @@
   line-height: 1.5;
 }
 
+.ff__ai-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.ff__ai-buttons .btn {
+  padding-left: var(--s-2);
+  padding-right: var(--s-2);
+  font-size: 14px;
+}
+
 .ff__ai-note {
   font-size: 12px;
   color: var(--text-2);

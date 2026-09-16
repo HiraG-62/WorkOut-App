@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Sparkles, Trash2 } from 'lucide-react'
 import { addExercise, archiveExercise, unarchiveExercise, updateExercise } from '../../db/repo'
+import { FAVORITE_TOGGLE_DESCRIPTION, FAVORITE_TOGGLE_LABEL } from '../../lib/favorite'
 import { useToast } from '../../components/ui/Toast'
 import { createAiClient, AiError, isAiConfigured } from '../../lib/ai'
 import { useSettings } from '../../hooks/useSettings'
@@ -46,6 +47,7 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
   const abortRef = useRef<AbortController | null>(null)
   const timedOutRef = useRef(false)
   const [d, setD] = useState<Draft>(EMPTY)
+  const [favorite, setFavorite] = useState(false)
   const [error, setError] = useState('')
   const [metError, setMetError] = useState('')
   const [guide, setGuide] = useState<ExerciseGuideText | undefined>(undefined)
@@ -69,6 +71,7 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
           }
         : EMPTY,
     )
+    setFavorite(exercise?.favorite ?? false)
     setError('')
     setMetError('')
     setGuide(exercise?.guide)
@@ -156,8 +159,9 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
       guide: guide && guide.tips.length > 0 ? guide : undefined,
     }
       if (exercise) {
-        await updateExercise(exercise.id, payload)
-        onSaved?.({ ...exercise, ...payload })
+        const patch = { ...payload, favorite }
+        await updateExercise(exercise.id, patch)
+        onSaved?.({ ...exercise, ...patch })
       } else {
         onSaved?.(await addExercise(payload))
       }
@@ -222,6 +226,7 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
           options={(Object.keys(BODY_PARTS) as BodyPart[]).map((k) => ({ value: k, label: BODY_PARTS[k] }))}
         />
         <Toggle checked={d.useWeight} onChange={(useWeight) => setD((s) => ({ ...s, useWeight }))} label="重量も記録する" description="ダンベルやリュック加重をする種目向け" />
+        {exercise && <Toggle checked={favorite} onChange={setFavorite} label={FAVORITE_TOGGLE_LABEL} description={FAVORITE_TOGGLE_DESCRIPTION} />}
         <TextField label="休憩時間（この種目だけ）" type="number" inputMode="numeric" value={d.restSec} onChange={(e) => setD((s) => ({ ...s, restSec: e.target.value }))} suffix="秒" placeholder="全体設定を使う" />
         <div className="stack stack--sm">
           <SelectField

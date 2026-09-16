@@ -69,3 +69,10 @@
 .ms__delete:active {
   color: var(--danger);
 }
+
+.ms__fav {
+  width: var(--tap);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}

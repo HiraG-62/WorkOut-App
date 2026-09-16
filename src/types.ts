@@ -39,6 +39,8 @@ export interface Exercise {
   isCustom: boolean
   archived: boolean
   createdAt: number
+  /** お気に入り（一覧の上位に固定） */
+  favorite?: boolean
 }
 
 export interface ExerciseGuideText {
@@ -70,6 +72,8 @@ export interface Routine {
   useCount: number
   lastUsedAt: number
   createdAt: number
+  /** お気に入り（一覧の上位に固定） */
+  favorite?: boolean
 }
 
 export interface Workout {
@@ -113,6 +117,8 @@ export interface Food {
   source: 'manual' | 'ai' | 'quick'
   archived: boolean
   createdAt: number
+  /** お気に入り（一覧の上位に固定） */
+  favorite?: boolean
 }
 
 export interface MealEntry {
@@ -134,6 +140,8 @@ export interface MealSet {
   name: string
   items: { foodId: string; quantity: number }[]
   createdAt: number
+  /** お気に入り（一覧の上位に固定） */
+  favorite?: boolean
 }
 
 export interface WeightEntry {

@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Pencil, Plus, Search } from 'lucide-react'
-import { logFood, unlogFood } from '../../db/repo'
+import { logFood, setFoodFavorite, unlogFood } from '../../db/repo'
 import { tapHaptic } from '../../lib/feedback'
 import { Sheet } from '../../components/ui/Sheet'
 import { Button } from '../../components/ui/Button'
+import { FavoriteButton } from '../../components/ui/FavoriteButton'
 import { useToast } from '../../components/ui/Toast'
 import { useBusy } from '../../hooks/useBusy'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -70,6 +71,7 @@ export function FoodPickerSheet({ open, onClose, foods, date }: FoodPickerSheetP
                     {f.unitLabel} · <span className="num">{f.kcal}</span> kcal · P{f.protein} F{f.fat} C{f.carbs}
                   </span>
                 </button>
+                <FavoriteButton name={f.name} favorite={f.favorite} onToggle={() => void setFoodFavorite(f.id, !f.favorite)} className="fp__fav" />
                 <button
                   type="button"
                   className="fp__edit"

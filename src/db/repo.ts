@@ -43,6 +43,10 @@ export async function unarchiveExercise(id: string): Promise<void> {
   await db.exercises.update(id, { archived: false })
 }
 
+export async function setExerciseFavorite(id: string, favorite: boolean): Promise<void> {
+  await db.exercises.update(id, { favorite })
+}
+
 // ---------- Workouts ----------
 
 export async function createWorkout(exerciseIds: string[], plan?: RoutineItem[], routineId?: string): Promise<Workout> {
@@ -200,6 +204,10 @@ export async function unarchiveFood(id: string): Promise<void> {
   await db.foods.update(id, { archived: false })
 }
 
+export async function setFoodFavorite(id: string, favorite: boolean): Promise<void> {
+  await db.foods.update(id, { favorite })
+}
+
 function scaled(food: Pick<Food, 'kcal' | 'protein' | 'fat' | 'carbs'>, q: number) {
   const r1 = (n: number) => Math.round(n * q * 10) / 10
   return {
@@ -329,6 +337,10 @@ export async function deleteMealSet(id: string): Promise<void> {
   await db.mealSets.delete(id)
 }
 
+export async function setMealSetFavorite(id: string, favorite: boolean): Promise<void> {
+  await db.mealSets.update(id, { favorite })
+}
+
 export async function logMealSet(set: MealSet, date = todayKey()): Promise<{ logged: number; skipped: number }> {
   let logged = 0
   let skipped = 0
@@ -388,6 +400,10 @@ export async function deleteRoutine(id: string): Promise<Routine | undefined> {
 
 export async function restoreRoutine(r: Routine): Promise<void> {
   await db.routines.put(r)
+}
+
+export async function setRoutineFavorite(id: string, favorite: boolean): Promise<void> {
+  await db.routines.update(id, { favorite })
 }
 
 /** メニューからワークアウトを開始する。削除済みの種目は除き、残りが無ければ何も作らず null */

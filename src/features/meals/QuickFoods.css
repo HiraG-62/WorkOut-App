@@ -40,17 +40,29 @@
 }
 
 .qf__name {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
   font-weight: 600;
   font-size: 15px;
+  max-width: 100%;
+}
+
+.qf__name-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
 }
 
 .qf__meta {
   font-size: 12px;
   color: var(--text-2);
+}
+
+.qf__star {
+  color: var(--warning);
+  flex-shrink: 0;
 }
 
 .qf__chip--add:only-child {

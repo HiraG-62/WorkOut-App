@@ -56,6 +56,16 @@
   white-space: nowrap;
 }
 
+.rs__fav {
+  width: var(--tap);
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .rs__play {
   width: 56px;
   flex-shrink: 0;

@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
 import { db } from '../../db/db'
 import { timeSlot } from '../../lib/date'
+import { favRank } from '../../lib/favorite'
 import type { Food } from '../../types'
 
 const SLOT_WEIGHT = 3
@@ -22,7 +23,7 @@ export function useFoods(): { foods: Food[] } {
   const foods = useMemo(() => {
     if (!result) return []
     const { all, now, slot } = result
-    return [...all].sort((a, b) => foodScore(b, slot, now) - foodScore(a, slot, now) || a.name.localeCompare(b.name, 'ja'))
+    return [...all].sort((a, b) => favRank(a) - favRank(b) || foodScore(b, slot, now) - foodScore(a, slot, now) || a.name.localeCompare(b.name, 'ja'))
   }, [result])
   return { foods }
 }

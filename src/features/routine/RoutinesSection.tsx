@@ -3,12 +3,14 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate } from 'react-router-dom'
 import { ListChecks, Play, SquarePlay } from 'lucide-react'
 import { db } from '../../db/db'
-import { startRoutine } from '../../db/repo'
+import { setRoutineFavorite, startRoutine } from '../../db/repo'
 import { isAiConfigured } from '../../lib/ai'
+import { favRank } from '../../lib/favorite'
 import { useSettings } from '../../hooks/useSettings'
 import { useBusy } from '../../hooks/useBusy'
 import { Section } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { FavoriteButton } from '../../components/ui/FavoriteButton'
 import { useToast } from '../../components/ui/Toast'
 import type { Exercise, Routine } from '../../types'
 import { RoutineEditorSheet } from './RoutineEditorSheet'
@@ -36,8 +38,11 @@ export function RoutinesSection({ exercises, canStart }: RoutinesSectionProps) {
   const exerciseMap = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises])
   const aiReady = isAiConfigured(settings.ai)
 
-  // よく使う順 → 新しい順
-  const sorted = useMemo(() => [...(routines ?? [])].sort((a, b) => b.lastUsedAt - a.lastUsedAt || b.createdAt - a.createdAt), [routines])
+  // お気に入り → よく使う順 → 新しい順
+  const sorted = useMemo(
+    () => [...(routines ?? [])].sort((a, b) => favRank(a) - favRank(b) || b.lastUsedAt - a.lastUsedAt || b.createdAt - a.createdAt),
+    [routines],
+  )
 
   const start = (r: Routine) =>
     guard(async () => {
@@ -78,6 +83,7 @@ export function RoutinesSection({ exercises, canStart }: RoutinesSectionProps) {
                 </span>
                 <span className="sr-only">を編集</span>
               </button>
+              <FavoriteButton name={r.name} favorite={r.favorite} onToggle={() => void setRoutineFavorite(r.id, !r.favorite)} className="rs__fav" size={18} />
               <button type="button" className={`rs__play ${canStart ? '' : 'rs__play--off'}`} onClick={() => void start(r)} aria-label={`${r.name} を開始`} aria-disabled={!canStart}>
                 <Play size={18} fill="currentColor" aria-hidden />
               </button>

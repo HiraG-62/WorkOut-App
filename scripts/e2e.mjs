@@ -430,6 +430,27 @@ try {
   await sleep(600)
   const labelLogged = await page.$$eval('.mel__row', (els) => els.some((e) => e.textContent?.includes('サラダチキン')))
   assert(labelLogged, '成分表から登録した食品が今日の記録に入る')
+
+  // 8e2. フードのお気に入り: 登録済みピッカーで2件目のフードの星を押すと先頭に来る
+  await clickText('登録済み')
+  await sleep(300)
+  const foodNamesBefore = await page.$$eval('.fp__name', (els) => els.map((e) => e.textContent?.trim() ?? ''))
+  assert(foodNamesBefore.length >= 2, `お気に入りテスト用に2件以上のフードが登録済み (${foodNamesBefore.join('|')})`)
+  assert(new Set(foodNamesBefore).size === foodNamesBefore.length, `フード名が重複していない (${foodNamesBefore.join('|')})`)
+  const secondFoodName = foodNamesBefore[1]
+  await clickLabel(`${secondFoodName} をお気に入りに追加`)
+  await sleep(200)
+  const favPressed = await page.$eval(`[aria-label="${secondFoodName} をお気に入りから外す"]`, (e) => e.getAttribute('aria-pressed'))
+  assert(favPressed === 'true', `フードの星を押すと aria-pressed が true になる (${secondFoodName})`)
+  await clickLabel('閉じる')
+  await sleep(300)
+  await clickText('登録済み')
+  await sleep(300)
+  const foodNamesAfter = await page.$$eval('.fp__name', (els) => els.map((e) => e.textContent?.trim() ?? ''))
+  assert(foodNamesAfter[0] === secondFoodName, `お気に入りにしたフードが一覧の先頭に来る (${foodNamesAfter.join('|')})`)
+  await clickLabel('閉じる')
+  await sleep(300)
+
   // 8f. 種目の追加: 名前から AI で判定 → フォームが埋まる → 保存
   await page.goto(`${BASE}#/workout`, { waitUntil: 'networkidle0' })
   await sleep(400)
@@ -547,6 +568,22 @@ try {
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await sleep(300)
   await shot('home-with-data-bottom')
+
+  // 9b. 種目のお気に入り: 種目ピッカーで「プランク」の星を押すと「すべて」フィルタで先頭に来る
+  await page.goto(`${BASE}#/workout`, { waitUntil: 'networkidle0' })
+  await sleep(400)
+  await clickText('今日もう1回始める')
+  await sleep(400)
+  await clickText('すべて', { tag: 'button' })
+  await sleep(200)
+  await clickLabel('プランク をお気に入りに追加')
+  await sleep(200)
+  const exFavPressed = await page.$eval('[aria-label="プランク をお気に入りから外す"]', (e) => e.getAttribute('aria-pressed'))
+  assert(exFavPressed === 'true', '種目の星を押すと aria-pressed が true になる（プランク）')
+  const exNamesAfterFav = await page.$$eval('.ep__name', (els) => els.map((e) => e.textContent ?? ''))
+  assert(exNamesAfterFav[0] === 'プランク', `お気に入りにした種目が「すべて」の先頭に来る (${exNamesAfterFav.slice(0, 3).join('|')})`)
+  await clickLabel('閉じる')
+  await sleep(300)
 
   // 10. 2回目のワークアウト: 前回と同じで開始 → 残りを一括完了
   await page.evaluate(async () => {

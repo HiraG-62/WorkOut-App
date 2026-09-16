@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react'
 import { addRoutine, DEFAULT_PLAN_REPS, DEFAULT_PLAN_SECONDS, DEFAULT_PLAN_SETS, deleteRoutine, restoreRoutine, updateRoutine } from '../../db/repo'
+import { FAVORITE_TOGGLE_DESCRIPTION, FAVORITE_TOGGLE_LABEL } from '../../lib/favorite'
 import { Sheet } from '../../components/ui/Sheet'
 import { Button } from '../../components/ui/Button'
 import { Stepper } from '../../components/ui/Stepper'
 import { TextField } from '../../components/ui/Field'
+import { Toggle } from '../../components/ui/Toggle'
 import { useToast } from '../../components/ui/Toast'
 import { useBusy } from '../../hooks/useBusy'
 import { ExercisePickerSheet } from '../workout/ExercisePickerSheet'
@@ -37,6 +39,7 @@ export function RoutineEditorSheet({ open, onClose, exercises, routine = null, i
   const guard = useBusy()
   const [name, setName] = useState('')
   const [items, setItems] = useState<RoutineItem[]>([])
+  const [favorite, setFavorite] = useState(false)
   const [error, setError] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
   const byId = new Map(exercises.map((e) => [e.id, e]))
@@ -47,6 +50,7 @@ export function RoutineEditorSheet({ open, onClose, exercises, routine = null, i
     // initial.items があれば編集時でもそれを優先（ワークアウトの実績でメニューを更新する用途）
     setName(routine?.name ?? initial?.name ?? '')
     setItems(initial?.items ?? routine?.items ?? [])
+    setFavorite(routine?.favorite ?? false)
     setError('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, routine?.id])
@@ -84,8 +88,9 @@ export function RoutineEditorSheet({ open, onClose, exercises, routine = null, i
       }
       const payload = { name: name.trim(), items }
       if (routine) {
-        await updateRoutine(routine.id, payload)
-        onSaved?.({ ...routine, ...payload })
+        const patch = { ...payload, favorite }
+        await updateRoutine(routine.id, patch)
+        onSaved?.({ ...routine, ...patch })
         toast.show(`「${payload.name}」を更新しました`, 'success')
       } else {
         const r = await addRoutine({ ...payload, source: initial?.source ?? 'manual', sourceUrl: initial?.sourceUrl, note: initial?.note })
@@ -120,6 +125,7 @@ export function RoutineEditorSheet({ open, onClose, exercises, routine = null, i
     >
       <div className="stack">
         <TextField label="メニュー名" value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 朝の全身 20分" error={error && !name.trim() ? error : undefined} autoFocus={!routine && !initial?.name} />
+        {routine && <Toggle checked={favorite} onChange={setFavorite} label={FAVORITE_TOGGLE_LABEL} description={FAVORITE_TOGGLE_DESCRIPTION} />}
         <ol className="re__list" aria-label="メニューの種目">
           {items.map((it, idx) => {
             const ex = byId.get(it.exerciseId)

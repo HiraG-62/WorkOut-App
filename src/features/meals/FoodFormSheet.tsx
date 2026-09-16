@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ScanText, Sparkles, Trash2 } from 'lucide-react'
 import { addFood, archiveFood, unarchiveFood, updateFood } from '../../db/repo'
+import { FAVORITE_TOGGLE_DESCRIPTION, FAVORITE_TOGGLE_LABEL } from '../../lib/favorite'
 import { useToast } from '../../components/ui/Toast'
 import { useBusy } from '../../hooks/useBusy'
 import { useSettings } from '../../hooks/useSettings'
@@ -9,6 +10,7 @@ import { createAiClient, AiError, isAiConfigured } from '../../lib/ai'
 import { Sheet } from '../../components/ui/Sheet'
 import { TextField } from '../../components/ui/Field'
 import { Button } from '../../components/ui/Button'
+import { Toggle } from '../../components/ui/Toggle'
 import { AI_PROVIDERS, type Food, type FoodEstimate } from '../../types'
 import { encodeImageForAi } from '../../lib/image'
 import './FoodFormSheet.css'
@@ -66,6 +68,7 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
   const guard = useBusy()
   const settings = useSettings()
   const [d, setD] = useState<Draft>(EMPTY)
+  const [favorite, setFavorite] = useState(false)
   const [error, setError] = useState('')
   const [aiBusy, setAiBusy] = useState(false)
   const [aiNote, setAiNote] = useState('')
@@ -93,6 +96,7 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
           }
         : EMPTY,
     )
+    setFavorite(food?.favorite ?? false)
     setError('')
     setAiNote('')
     setAiText('')
@@ -188,8 +192,9 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
         carbs: num(d.carbs),
       }
       if (food) {
-        await updateFood(food.id, payload)
-        onSaved?.({ ...food, ...payload })
+        const patch = { ...payload, favorite }
+        await updateFood(food.id, patch)
+        onSaved?.({ ...food, ...patch })
       } else {
         const created = await addFood({ ...payload, source: aiNote ? 'ai' : 'manual' })
         onSaved?.(created)
@@ -230,6 +235,7 @@ export function FoodFormSheet({ open, onClose, food, onSaved }: FoodFormSheetPro
         }}
       >
         <TextField label="名前" value={d.name} onChange={set('name')} placeholder="例: 鶏むね肉 100g、セブンのサラダチキン" error={error} autoFocus={!food} enterKeyHint="next" />
+        {food && <Toggle checked={favorite} onChange={setFavorite} label={FAVORITE_TOGGLE_LABEL} description={FAVORITE_TOGGLE_DESCRIPTION} />}
         {aiReady && (
           <div className="ff__ai">
             <label className="field">

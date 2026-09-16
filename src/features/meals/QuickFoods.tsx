@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, Star } from 'lucide-react'
 import { logFood, unlogFood } from '../../db/repo'
 import { tapHaptic } from '../../lib/feedback'
 import { useToast } from '../../components/ui/Toast'
@@ -34,7 +34,10 @@ export function QuickFoods({ foods, date, limit, onMore, onAdd }: QuickFoodsProp
       {shown.map((f) => (
         <button key={f.id} type="button" className="qf__chip" onClick={() => void handleTap(f)} aria-label={`${f.name} を記録`}>
           <span className="qf__body">
-            <span className="qf__name">{f.name}</span>
+            <span className="qf__name">
+              {f.favorite && <Star size={12} className="qf__star" fill="currentColor" aria-hidden />}
+              <span className="qf__name-text">{f.name}</span>
+            </span>
             <span className="qf__meta">
               <span className="num">{f.kcal}</span> kcal · P<span className="num">{f.protein}</span>
             </span>

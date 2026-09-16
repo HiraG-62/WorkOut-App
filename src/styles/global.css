@@ -221,6 +221,21 @@ svg {
   color: var(--text-2);
 }
 
+/* お気に入りの星ボタン（共通の色・状態。サイズ・配置は各機能の CSS で指定） */
+.fav-btn {
+  color: var(--text-3);
+  transition: color var(--dur-fast);
+}
+
+.fav-btn:active {
+  color: var(--text);
+}
+
+.fav-btn--on,
+.fav-btn--on:active {
+  color: var(--warning);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

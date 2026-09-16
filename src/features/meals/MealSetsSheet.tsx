@@ -3,9 +3,11 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Layers, Plus, Trash2 } from 'lucide-react'
 import { db } from '../../db/db'
 import { formatRelative } from '../../lib/date'
-import { addMealSet, deleteMealSet, logMealSet } from '../../db/repo'
+import { favRank } from '../../lib/favorite'
+import { addMealSet, deleteMealSet, logMealSet, setMealSetFavorite } from '../../db/repo'
 import { Sheet } from '../../components/ui/Sheet'
 import { Button } from '../../components/ui/Button'
+import { FavoriteButton } from '../../components/ui/FavoriteButton'
 import { useToast } from '../../components/ui/Toast'
 import { useBusy } from '../../hooks/useBusy'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -26,7 +28,7 @@ interface MealSetsSheetProps {
 export function MealSetsSheet({ open, onClose, date, todayEntries }: MealSetsSheetProps) {
   const toast = useToast()
   const guard = useBusy()
-  const sets = useLiveQuery(async () => (await db.mealSets.toArray()).sort((a, b) => a.createdAt - b.createdAt), [])
+  const sets = useLiveQuery(async () => (await db.mealSets.toArray()).sort((a, b) => favRank(a) - favRank(b) || a.createdAt - b.createdAt), [])
   const foods = useLiveQuery(() => db.foods.toArray(), [])
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
@@ -98,6 +100,7 @@ export function MealSetsSheet({ open, onClose, date, todayEntries }: MealSetsShe
                 <span className="ms__name">{s.name}</span>
                 <span className="ms__meta">{s.items.map((it) => `${foodName(it.foodId)}${it.quantity !== 1 ? `×${it.quantity}` : ''}`).join('、')}</span>
               </button>
+              <FavoriteButton name={s.name} favorite={s.favorite} onToggle={() => void setMealSetFavorite(s.id, !s.favorite)} className="ms__fav" />
               <button type="button" className="ms__delete" aria-label={`${s.name} を削除`} onClick={() => void removeSet(s.id)}>
                 <Trash2 size={16} aria-hidden />
               </button>

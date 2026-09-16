@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Check, Info, Pencil, Plus, Search } from 'lucide-react'
+import { setExerciseFavorite } from '../../db/repo'
+import { favRank } from '../../lib/favorite'
 import { Sheet } from '../../components/ui/Sheet'
 import { Button } from '../../components/ui/Button'
+import { FavoriteButton } from '../../components/ui/FavoriteButton'
 import { ExerciseFormSheet } from './ExerciseFormSheet'
 import { ExerciseGuideSheet } from './ExerciseGuideSheet'
 import { BODY_PARTS, EXERCISE_TYPES, type BodyPart, type Exercise } from '../../types'
@@ -41,9 +44,11 @@ export function ExercisePickerSheet({ open, onClose, exercises, selectedIds, rec
       const i = recentIds.indexOf(id)
       return i === -1 ? Number.MAX_SAFE_INTEGER : i
     }
-    // 最近使った順 → 初期種目の並び（部位→難易度） → 名前
+    // お気に入り → 最近使った順 → 初期種目の並び（部位→難易度） → 名前
     const orderOf = (e: Exercise) => e.order ?? Number.MAX_SAFE_INTEGER
-    return [...searched].sort((a, b) => recentRank(a.id) - recentRank(b.id) || orderOf(a) - orderOf(b) || a.name.localeCompare(b.name, 'ja'))
+    return [...searched].sort(
+      (a, b) => favRank(a) - favRank(b) || recentRank(a.id) - recentRank(b.id) || orderOf(a) - orderOf(b) || a.name.localeCompare(b.name, 'ja'),
+    )
   }, [exercises, q, filter, recentIds])
 
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
@@ -116,6 +121,7 @@ export function ExercisePickerSheet({ open, onClose, exercises, selectedIds, rec
                     </span>
                   </span>
                 </button>
+                <FavoriteButton name={e.name} favorite={e.favorite} onToggle={() => void setExerciseFavorite(e.id, !e.favorite)} className="ep__fav" />
                 <button type="button" className="ep__edit" aria-label={`${e.name} のフォームを見る`} onClick={() => setGuide(e)}>
                   <Info size={16} aria-hidden />
                 </button>

@@ -150,6 +150,13 @@
   color: var(--text);
 }
 
+.ep__fav {
+  width: var(--tap);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
 .ep__empty {
   padding: var(--s-6);
   text-align: center;

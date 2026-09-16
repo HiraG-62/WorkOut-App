@@ -1,10 +1,17 @@
 import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-/** 設定画面に出すビルド情報。CI では GITHUB_SHA、ローカルでは git から取る */
+/** アプリのバージョン（package.json の version が唯一の正。0.x はベータ） */
 function appVersion(): string {
+  const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }
+  return pkg.version
+}
+
+/** 設定画面に出すビルド情報。CI では GITHUB_SHA、ローカルでは git から取る */
+function commitSha(): string {
   const sha = process.env.GITHUB_SHA?.slice(0, 7)
   if (sha) return sha
   try {
@@ -19,6 +26,7 @@ export default defineConfig({
   base: './',
   define: {
     __APP_VERSION__: JSON.stringify(appVersion()),
+    __APP_COMMIT__: JSON.stringify(commitSha()),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },
   plugins: [

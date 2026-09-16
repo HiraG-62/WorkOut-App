@@ -40,6 +40,18 @@ React 19 / Vite 8 / TypeScript / Dexie / react-router (HashRouter) / vite-plugin
 
 AI 連携はブラウザから各社 API を直接呼びます（Claude は `@anthropic-ai/sdk` の `dangerouslyAllowBrowser`、OpenAI と Gemini は `fetch`）。キーは端末の IndexedDB にのみ保存し、バックアップにも含めません。
 
+## バージョン管理
+
+`package.json` の `version` が唯一の正。`major.minor.patch` で、**満足のいく出来になるまで major は 0（ベータ）**。設定画面の最下部に `v0.1.0 β · コミットSHA · ビルド時刻` が出る。
+
+| 上げる桁 | いつ | コマンド |
+| --- | --- | --- |
+| patch | バグ修正・微調整 | `npm run release:patch` |
+| minor | 機能追加 | `npm run release:minor` |
+| major | ベータ卒業や大きな作り直し（当面は使わない） | `npm run release:major` |
+
+コマンドは version を書き換えたコミットと `vX.Y.Z` タグを作る（作業ツリーがクリーンな状態で実行）。その後 `git push --follow-tags` すると、main のデプロイに加えてタグから GitHub Release が自動生成される（`.github/workflows/release.yml`）。
+
 ## デプロイ / CI
 
 - `main` に push すると GitHub Actions（`.github/workflows/ci-deploy.yml`）が 型チェック → lint → ビルド → E2E → PWA 確認 を実行し、通れば GitHub Pages に自動デプロイします

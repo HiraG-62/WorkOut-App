@@ -1,7 +1,7 @@
 {
   "name": "workout-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,7 +13,10 @@
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "pwa:check": "node scripts/pwa-check.mjs",
     "migration:check": "node scripts/migration-check.mjs http://localhost:5199/",
-    "update:check": "node scripts/update-check.mjs"
+    "update:check": "node scripts/update-check.mjs",
+    "release:patch": "npm version patch -m \"chore: release v%s\"",
+    "release:minor": "npm version minor -m \"chore: release v%s\"",
+    "release:major": "npm version major -m \"chore: release v%s\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",

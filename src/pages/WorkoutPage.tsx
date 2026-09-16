@@ -14,6 +14,8 @@ import { Button } from '../components/ui/Button'
 import { ExercisePickerSheet } from '../features/workout/ExercisePickerSheet'
 import { useRecentExerciseIds } from '../features/workout/useRecentExerciseIds'
 import { summarizeSets } from '../features/workout/useWorkoutStats'
+import { useWeightKg } from '../features/workout/useDayBurn'
+import { estimateBurnKcal } from '../lib/calories'
 import './WorkoutPage.css'
 
 const HISTORY_LIMIT = 20
@@ -22,6 +24,7 @@ export function WorkoutPage() {
   const navigate = useNavigate()
   const today = useToday()
   const guard = useBusy()
+  const weightKg = useWeightKg()
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(HISTORY_LIMIT).toArray(), [])
   const exerciseList = useLiveQuery(() => db.exercises.toArray(), [])
   const allSets = useLiveQuery(() => db.sets.toArray(), [])
@@ -129,7 +132,7 @@ export function WorkoutPage() {
                     <span className="wp__hist-body">
                       <span className="wp__hist-summary">{summarizeSets(s, exercises, w.exerciseIds) || '記録なし'}</span>
                       <span className="wp__hist-meta">
-                        {w.exerciseIds.length}種目 · {s.length}セット{w.endedAt ? ` · ${formatDuration(w.endedAt - w.startedAt)}` : ' · 進行中'}
+                        {w.exerciseIds.length}種目 · {s.length}セット{w.endedAt ? ` · 約${estimateBurnKcal({ workout: w, sets: s, exercises, weightKg })}kcal · ${formatDuration(w.endedAt - w.startedAt)}` : ' · 進行中'}
                       </span>
                     </span>
                     <ChevronRight size={18} className="faint" aria-hidden />

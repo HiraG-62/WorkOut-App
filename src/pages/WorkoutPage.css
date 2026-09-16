@@ -166,4 +166,7 @@
 .wp__hist-meta {
   font-size: 12px;
   color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

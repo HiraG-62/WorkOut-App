@@ -5,6 +5,7 @@ import type {
   MealEntry,
   MealSet,
   Settings,
+  WeeklyReview,
   WeightEntry,
   Workout,
   WorkoutSet,
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS: Settings = {
     // 空欄なら AI_PROVIDERS の既定モデルを使う
     models: { claude: '', openai: '', gemini: '' },
   },
+  addBurnToTarget: false,
   onboarded: false,
 }
 
@@ -36,6 +38,7 @@ class WorkoutDB extends Dexie {
   mealSets!: EntityTable<MealSet, 'id'>
   weights!: EntityTable<WeightEntry, 'id'>
   settings!: EntityTable<Settings, 'id'>
+  weeklyReviews!: EntityTable<WeeklyReview, 'id'>
 
   constructor() {
     super('workout-app')
@@ -60,6 +63,17 @@ class WorkoutDB extends Dexie {
           .modify((ex: Exercise) => {
             const order = orderById.get(ex.id)
             if (order !== undefined) ex.order = order
+          })
+      })
+    // v3: 週間レビューの保存先。設定の新フィールドは既定値で補う
+    this.version(3)
+      .stores({ weeklyReviews: 'id' })
+      .upgrade(async (tx) => {
+        await tx
+          .table('settings')
+          .toCollection()
+          .modify((s: Settings) => {
+            if (typeof s.addBurnToTarget !== 'boolean') s.addBurnToTarget = false
           })
       })
     this.on('populate', () => {

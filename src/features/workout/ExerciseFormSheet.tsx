@@ -8,9 +8,9 @@ import { Segmented, SelectField, TextField } from '../../components/ui/Field'
 import { Toggle } from '../../components/ui/Toggle'
 import { Button } from '../../components/ui/Button'
 import { BODY_PARTS, EXERCISE_TYPES, type BodyPart, type Exercise, type ExerciseType } from '../../types'
-import { FORM_FAMILIES, type FormFamily } from './formGuide'
+import { FORM_FAMILIES, resolveFamily, type FormFamily } from './formGuide'
 import { ExerciseFigure } from './ExerciseFigure'
-import { resolveFamily } from './ExerciseGuideSheet'
+import { defaultMetFor, MET_MAX, MET_MIN } from '../../lib/calories'
 
 interface ExerciseFormSheetProps {
   open: boolean
@@ -28,17 +28,19 @@ interface Draft {
   restSec: string
   progressionId: string
   formFamily: string
+  met: string
 }
 
 const UNDO_MS = 6000
 
-const EMPTY: Draft = { name: '', type: 'reps', bodyPart: 'chest', useWeight: false, restSec: '', progressionId: '', formFamily: '' }
+const EMPTY: Draft = { name: '', type: 'reps', bodyPart: 'chest', useWeight: false, restSec: '', progressionId: '', formFamily: '', met: '' }
 
 export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSaved }: ExerciseFormSheetProps) {
   const toast = useToast()
   const guard = useBusy()
   const [d, setD] = useState<Draft>(EMPTY)
   const [error, setError] = useState('')
+  const [metError, setMetError] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -52,10 +54,12 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
             restSec: exercise.restSec ? String(exercise.restSec) : '',
             progressionId: exercise.progressionId ?? '',
             formFamily: resolveFamily(exercise) ?? '',
+            met: exercise.met !== undefined ? String(exercise.met) : '',
           }
         : EMPTY,
     )
     setError('')
+    setMetError('')
   }, [open, exercise])
 
   const save = () =>
@@ -65,6 +69,12 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
         return
       }
     const rest = Number(d.restSec)
+    const metText = d.met.trim()
+    const met = Number(metText)
+    if (metText !== '' && (!Number.isFinite(met) || met < MET_MIN || met > MET_MAX)) {
+      setMetError(`${MET_MIN}〜${MET_MAX} の数値で入力してください（空欄なら既定値）`)
+      return
+    }
     const payload = {
       name: d.name.trim(),
       type: d.type,
@@ -73,6 +83,7 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
       restSec: Number.isFinite(rest) && rest > 0 ? Math.round(rest) : undefined,
       progressionId: d.progressionId || undefined,
       formFamily: (d.formFamily || undefined) as FormFamily | undefined,
+      met: metText === '' ? undefined : Math.round(met * 10) / 10,
     }
       if (exercise) {
         await updateExercise(exercise.id, payload)
@@ -82,6 +93,9 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
       }
       onClose()
     })
+
+  // 動きのタイプ未選択の初期種目はガイド定義から既定値を引く
+  const placeholderMet = defaultMetFor({ id: exercise?.id ?? '', formFamily: (d.formFamily || undefined) as FormFamily | undefined })
 
   const progressionOptions = [
     { value: '', label: 'なし' },
@@ -145,6 +159,19 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
             </div>
           )}
         </div>
+        <TextField
+          label="運動強度（MET）"
+          type="number"
+          inputMode="decimal"
+          value={d.met}
+          onChange={(e) => {
+            setMetError('')
+            setD((s) => ({ ...s, met: e.target.value }))
+          }}
+          placeholder={String(placeholderMet)}
+          hint={`消費カロリーの目安に使います。空欄なら動きのタイプの既定値（${placeholderMet}）。${MET_MIN}〜${MET_MAX}`}
+          error={metError}
+        />
         <SelectField label="次のレベルの種目" hint="楽になってきたら、ワークアウト中にワンタップで切り替えられます" value={d.progressionId} onChange={(e) => setD((s) => ({ ...s, progressionId: e.target.value }))} options={progressionOptions} />
       </div>
     </Sheet>

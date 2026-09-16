@@ -3,7 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Calculator, Download, Eye, EyeOff, Sparkles, Trash2, Upload } from 'lucide-react'
 import { db } from '../db/db'
 import { getLatestWeight, updateSettings } from '../db/repo'
-import { calcTargets } from '../lib/nutrition'
+import { calcTargets, clampTargets, TARGET_LIMITS } from '../lib/nutrition'
+import { FALLBACK_WEIGHT_KG } from '../lib/calories'
 import { createAiClient, AiError, isAiConfigured } from '../lib/ai'
 import { exportBackup, importBackup, saveTextFile } from '../lib/backup'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -35,14 +36,8 @@ const REST_STEP = 5
 const REST_MIN = 10
 const REST_MAX = 600
 const KCAL_STEP = 50
-const KCAL_MIN = 800
-const KCAL_MAX = 6000
 const G_STEP = 5
-const PROTEIN_MAX = 400
-const FAT_MAX = 300
-const CARBS_MAX = 800
 const SAVE_DEBOUNCE_MS = 400
-const FALLBACK_WEIGHT_KG = 60
 const VIBRATION_SUPPORTED = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'
 
 export function SettingsPage() {
@@ -132,12 +127,7 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
 
   const applySuggestion = () => {
     if (!suggestion) return
-    setTargets({
-      kcal: Math.round(suggestion.kcal),
-      protein: Math.round(suggestion.protein),
-      fat: Math.round(suggestion.fat),
-      carbs: Math.round(suggestion.carbs),
-    })
+    setTargets(clampTargets(suggestion))
     setSuggestion(null)
     toast.show('目標に反映しました', 'success')
   }
@@ -206,11 +196,17 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
           </div>
           {!aiReady && <p className="faint st__note">AI の API キーを設定すると「AIに相談」が使えます</p>}
           <div className="st__targets">
-            <Stepper label="カロリー" value={targets.kcal} onChange={(kcal) => setTargets({ ...targets, kcal })} step={KCAL_STEP} min={KCAL_MIN} max={KCAL_MAX} unit="kcal" />
-            <Stepper label="タンパク質" value={targets.protein} onChange={(protein) => setTargets({ ...targets, protein })} step={G_STEP} min={0} max={PROTEIN_MAX} unit="g" />
-            <Stepper label="脂質" value={targets.fat} onChange={(fat) => setTargets({ ...targets, fat })} step={G_STEP} min={0} max={FAT_MAX} unit="g" />
-            <Stepper label="炭水化物" value={targets.carbs} onChange={(carbs) => setTargets({ ...targets, carbs })} step={G_STEP} min={0} max={CARBS_MAX} unit="g" />
+            <Stepper label="カロリー" value={targets.kcal} onChange={(kcal) => setTargets({ ...targets, kcal })} step={KCAL_STEP} min={TARGET_LIMITS.kcal.min} max={TARGET_LIMITS.kcal.max} unit="kcal" />
+            <Stepper label="タンパク質" value={targets.protein} onChange={(protein) => setTargets({ ...targets, protein })} step={G_STEP} min={TARGET_LIMITS.protein.min} max={TARGET_LIMITS.protein.max} unit="g" />
+            <Stepper label="脂質" value={targets.fat} onChange={(fat) => setTargets({ ...targets, fat })} step={G_STEP} min={TARGET_LIMITS.fat.min} max={TARGET_LIMITS.fat.max} unit="g" />
+            <Stepper label="炭水化物" value={targets.carbs} onChange={(carbs) => setTargets({ ...targets, carbs })} step={G_STEP} min={TARGET_LIMITS.carbs.min} max={TARGET_LIMITS.carbs.max} unit="g" />
           </div>
+          <Toggle
+            checked={initial.addBurnToTarget}
+            onChange={(addBurnToTarget) => void updateSettings({ addBurnToTarget })}
+            label="トレの消費カロリーを目標に加算"
+            description="MET×体重×時間で見積もった目安です。ONにすると、トレした日はその分だけ食べてよい計算になります。減量中はOFF推奨"
+          />
         </Card>
       </Section>
 

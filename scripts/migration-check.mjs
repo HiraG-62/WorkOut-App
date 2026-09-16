@@ -67,7 +67,9 @@ console.log('ex_squat order:', squat?.order, '| custom1 order:', custom?.order)
 console.log('errors:', errors.length ? errors : 'none')
 // Dexie は内部バージョンを 10 倍で保持する
 const DEXIE_VERSION_SCALE = 10
-const ok = result.version === 2 * DEXIE_VERSION_SCALE && typeof squat?.order === 'number' && custom?.order === undefined && errors.length === 0
+// 現在のスキーマバージョン（src/db/db.ts の this.version(n) の最大値）
+const SCHEMA_VERSION = 3
+const ok = result.version === SCHEMA_VERSION * DEXIE_VERSION_SCALE && typeof squat?.order === 'number' && custom?.order === undefined && errors.length === 0
 console.log(ok ? 'MIGRATION OK' : 'MIGRATION FAILED')
 process.exitCode = ok ? 0 : 1
 await browser.close()

@@ -1,7 +1,7 @@
 import { ArrowUpRight, ExternalLink, TriangleAlert } from 'lucide-react'
 import { Sheet } from '../../components/ui/Sheet'
 import { ExerciseFigure } from './ExerciseFigure'
-import { EXERCISE_GUIDES, youtubeSearchUrl, type FormFamily } from './formGuide'
+import { EXERCISE_GUIDES, resolveFamily, youtubeSearchUrl } from './formGuide'
 import { BODY_PARTS, EXERCISE_TYPES, type Exercise } from '../../types'
 import './ExerciseGuideSheet.css'
 
@@ -65,8 +65,3 @@ export function ExerciseGuideSheet({ exercise, onClose, progressionName }: Exerc
   )
 }
 
-/** 種目の図のタイプ。自作種目は formFamily、初期種目はガイドから引く */
-export function resolveFamily(exercise: Exercise | null): FormFamily | undefined {
-  if (!exercise) return undefined
-  return exercise.formFamily ?? EXERCISE_GUIDES[exercise.id]?.family
-}

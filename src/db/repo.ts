@@ -1,7 +1,7 @@
 import { db, DEFAULT_SETTINGS } from './db'
 import { newId } from '../lib/id'
 import { fromDateKey, timeSlot, todayKey } from '../lib/date'
-import type { Exercise, Food, MealEntry, MealSet, Settings, WeightEntry, Workout, WorkoutSet } from '../types'
+import type { Exercise, Food, MealEntry, MealSet, Settings, WeeklyReview, WeightEntry, Workout, WorkoutSet } from '../types'
 
 // ---------- Settings ----------
 
@@ -18,7 +18,7 @@ export async function updateSettings(patch: Partial<Omit<Settings, 'id'>>): Prom
 // ---------- Exercises ----------
 
 export async function addExercise(
-  input: Pick<Exercise, 'name' | 'type' | 'bodyPart' | 'useWeight'> & Partial<Pick<Exercise, 'restSec' | 'progressionId'>>,
+  input: Pick<Exercise, 'name' | 'type' | 'bodyPart' | 'useWeight'> & Partial<Pick<Exercise, 'restSec' | 'progressionId' | 'formFamily' | 'met'>>,
 ): Promise<Exercise> {
   const ex: Exercise = {
     id: newId(),
@@ -335,4 +335,12 @@ export async function upsertWeight(kg: number, date = todayKey()): Promise<void>
 
 export async function getLatestWeight(): Promise<WeightEntry | undefined> {
   return db.weights.orderBy('date').reverse().first()
+}
+
+export async function putWeeklyReview(review: WeeklyReview): Promise<void> {
+  await db.weeklyReviews.put(review)
+}
+
+export async function deleteWeeklyReview(id: string): Promise<void> {
+  await db.weeklyReviews.delete(id)
 }

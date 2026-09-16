@@ -19,3 +19,41 @@
 .nutri--compact .nutri__bars {
   gap: var(--s-2);
 }
+
+.nutri__burn {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  font-size: 12px;
+  color: var(--text-2);
+  margin-top: var(--s-1);
+}
+
+.nutri__burn-text {
+  white-space: nowrap;
+}
+
+.nutri__burn-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  background: var(--accent-dim);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.nutri__burn svg {
+  color: var(--warning);
+  flex-shrink: 0;
+}
+
+.nutri__burn .num {
+  color: var(--text);
+}
+
+.nutri__burn-note {
+  font-size: 11px;
+  color: var(--text-3);
+}

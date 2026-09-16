@@ -31,6 +31,8 @@ export interface Exercise {
   order?: number
   /** 図の表示に使う動きのタイプ（自作種目用。初期種目はガイド定義から引く） */
   formFamily?: FormFamily
+  /** 運動強度 MET（消費カロリー推定用）。未設定なら動きのタイプから既定値を引く */
+  met?: number
   isCustom: boolean
   archived: boolean
   createdAt: number
@@ -158,6 +160,8 @@ export interface Settings {
   sound: boolean
   vibration: boolean
   ai: AiConfig
+  /** トレーニングの推定消費カロリーを、その日のカロリー目標に加算する */
+  addBurnToTarget: boolean
   /** 初回セットアップ済み */
   onboarded: boolean
 }
@@ -194,4 +198,23 @@ export interface NutritionLabel {
 
 export interface TargetSuggestion extends Targets {
   rationale: string
+}
+
+/** 週間レビュー（AIの一言）。id は週の開始日（月曜, YYYY-MM-DD） */
+export interface WeeklyReview {
+  id: string
+  summary: string
+  advice: string
+  /** 目標を変えたほうがよい場合の提案。不要なら undefined */
+  suggestedTargets?: Targets
+  provider: AiProvider
+  createdAt: number
+}
+
+/** AI が返す週間レビュー */
+export interface WeeklyReviewResult {
+  summary: string
+  advice: string
+  changeTargets: boolean
+  suggestedTargets: Targets
 }

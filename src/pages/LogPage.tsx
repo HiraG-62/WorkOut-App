@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
-import { formatShort, lastNDays } from '../lib/date'
+import { formatMonthDay, lastNDays } from '../lib/date'
 import { useToday } from '../hooks/useToday'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, Section } from '../components/ui/Card'
@@ -9,6 +9,7 @@ import { Segmented } from '../components/ui/Field'
 import { LineChart, type LinePoint } from '../components/charts/LineChart'
 import { ActivityCalendar } from '../components/charts/ActivityCalendar'
 import { WeightQuick } from '../features/weight/WeightQuick'
+import { WeeklyReviewCard } from '../features/review/WeeklyReviewCard'
 import './LogPage.css'
 
 const MOVING_AVG_DAYS = 7
@@ -41,6 +42,7 @@ export function LogPage() {
   }, [weights, range, today])
   const weightAvg = useMemo(() => movingAverage(weightPoints.map((p) => p.y), MOVING_AVG_DAYS), [weightPoints])
 
+  const exerciseMap = useMemo(() => new Map((exercises ?? []).map((e) => [e.id, e])), [exercises])
   const workoutDays = useMemo(() => new Set((workouts ?? []).map((w) => w.date)), [workouts])
   const mealDays = useMemo(() => new Set((meals ?? []).map((m) => m.date)), [meals])
 
@@ -77,13 +79,17 @@ export function LogPage() {
 
   const unit = selected?.type === 'time' ? '秒' : '回'
   // n 日ごとに加えて最終点（今日）にも必ずラベルを出す
-  const xLabelEvery = (n: number, total: number) => (x: string, i: number) => (i === total - 1 || (i % n === 0 && i < total - 1 - n / 2) ? formatShort(x).split(' ')[0] : null)
+  const xLabelEvery = (n: number, total: number) => (x: string, i: number) => (i === total - 1 || (i % n === 0 && i < total - 1 - n / 2) ? formatMonthDay(x) : null)
 
   return (
     <div className="page lg">
       <PageHeader title="記録" />
 
       <WeightQuick />
+
+      <Section title="週の振り返り">
+        <WeeklyReviewCard today={today} workouts={workouts ?? []} sets={sets ?? []} meals={meals ?? []} weights={weights ?? []} exercises={exerciseMap} />
+      </Section>
 
       <Section
         title="体重の推移"
@@ -123,7 +129,7 @@ export function LogPage() {
               </select>
               <Segmented value={metric} onChange={setMetric} options={[{ value: 'max', label: `最大${unit}数` }, { value: 'total', label: `合計${unit}数` }]} label="指標" />
             </div>
-            <LineChart points={progressPoints} unit={unit} ariaLabel={`${selected?.name ?? ''}の${metric === 'max' ? '最大' : '合計'}${unit}数の推移`} xLabel={(x, i) => (progressPoints.length <= 6 || i % Math.ceil(progressPoints.length / 5) === 0 ? formatShort(x).split(' ')[0] : null)} zeroBased integerTicks />
+            <LineChart points={progressPoints} unit={unit} ariaLabel={`${selected?.name ?? ''}の${metric === 'max' ? '最大' : '合計'}${unit}数の推移`} xLabel={(x, i) => (progressPoints.length <= 6 || i % Math.ceil(progressPoints.length / 5) === 0 ? formatMonthDay(x) : null)} zeroBased integerTicks />
           </Card>
         )}
       </Section>

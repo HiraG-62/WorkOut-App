@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CheckCheck, CopyCheck, Dumbbell, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { CheckCheck, CopyCheck, Dumbbell, Flame, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { db } from '../db/db'
 import { addSet, deleteWorkout, finishWorkout, getLastSetsForExercise, reopenWorkout, setWorkoutExercises } from '../db/repo'
 import { formatDuration, formatLong } from '../lib/date'
@@ -17,6 +17,8 @@ import { useToast } from '../components/ui/Toast'
 import { ExerciseBlock } from '../features/workout/ExerciseBlock'
 import { ExercisePickerSheet } from '../features/workout/ExercisePickerSheet'
 import { useRecentExerciseIds } from '../features/workout/useRecentExerciseIds'
+import { useWeightInfo } from '../features/workout/useDayBurn'
+import { estimateBurnKcal } from '../lib/calories'
 import { useBusy } from '../hooks/useBusy'
 import type { WorkoutSet } from '../types'
 import './WorkoutSessionPage.css'
@@ -33,6 +35,7 @@ export function WorkoutSessionPage() {
   const toast = useToast()
   const guard = useBusy()
   const today = useToday()
+  const { kg: weightKg, recorded: weightRecorded } = useWeightInfo()
   const [bulkRunning, setBulkRunning] = useState(false)
   const workout = useLiveQuery(async () => (await db.workouts.get(id)) ?? null, [id])
   const sets = useLiveQuery(() => db.sets.where('workoutId').equals(id).sortBy('order'), [id])
@@ -81,6 +84,7 @@ export function WorkoutSessionPage() {
   const readOnly = !!workout.endedAt
   const elapsed = (workout.endedAt ?? now) - workout.startedAt
   const totalSets = sets.length
+  const burnKcal = estimateBurnKcal({ workout, sets, exercises, weightKg, now })
   const setsOf = (exId: string) => sets.filter((s) => s.exerciseId === exId)
 
   // 直近でセットを記録した種目を「取り組み中」とみなす。まだ無ければ先頭
@@ -100,7 +104,7 @@ export function WorkoutSessionPage() {
       toast.show('記録がなかったのでワークアウトを削除しました', 'info')
     } else {
       await finishWorkout(workout.id)
-      toast.show(`お疲れさま！ ${totalSets}セット完了`, 'success')
+      toast.show(`お疲れさま！ ${totalSets}セット完了 · 約${burnKcal}kcal 消費`, 'success')
     }
     navigate('/workout', { replace: true })
   }
@@ -160,6 +164,11 @@ export function WorkoutSessionPage() {
         {readOnly && (
           <span>
             <span className="num">{formatDuration(elapsed)}</span>
+          </span>
+        )}
+        {burnKcal > 0 && (
+          <span className="ws__burn">
+            <Flame size={14} aria-hidden />約<span className="num">{burnKcal}</span>kcal{!weightRecorded && <span className="ws__burn-note">（仮の体重）</span>}
           </span>
         )}
       </div>

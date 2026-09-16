@@ -14,6 +14,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
 import { NutritionSummary } from '../components/NutritionSummary'
 import { useDayMeals } from '../features/meals/useDayMeals'
+import { useDayBurn, useWeightInfo } from '../features/workout/useDayBurn'
 import { useFoods } from '../features/meals/useFoods'
 import { QuickFoods } from '../features/meals/QuickFoods'
 import { MealEntryList } from '../features/meals/MealEntryList'
@@ -45,6 +46,8 @@ export function MealsPage() {
     }
   }, [today])
   const { entries, totals } = useDayMeals(date)
+  const burnKcal = useDayBurn(date)
+  const weightInfo = useWeightInfo()
   const { foods } = useFoods()
   const [sheet, setSheet] = useState<SheetKind>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -122,7 +125,7 @@ export function MealsPage() {
       </Section>
 
       <Card>
-        <NutritionSummary totals={totals} targets={settings.targets} compact />
+        <NutritionSummary totals={totals} targets={settings.targets} compact burnKcal={burnKcal} addBurn={settings.addBurnToTarget} weightMissing={!weightInfo.recorded} />
       </Card>
 
       <Section title={`${formatRelative(date)}の記録`}>

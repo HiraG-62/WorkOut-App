@@ -1,4 +1,4 @@
-import type { FoodEstimate, NutritionLabel, TargetSuggestion } from '../../types'
+import type { FoodEstimate, NutritionLabel, TargetSuggestion, WeeklyReviewResult } from '../../types'
 import {
   FOOD_ESTIMATE_JSON_SCHEMA,
   FOOD_SYSTEM_PROMPT,
@@ -14,6 +14,10 @@ import {
   TargetSuggestionSchema,
   foodUserPrompt,
   targetUserPrompt,
+  WEEKLY_REVIEW_JSON_SCHEMA,
+  WEEKLY_SYSTEM_PROMPT,
+  WeeklyReviewSchema,
+  weeklyUserPrompt,
 } from './prompts'
 import {
   AiError,
@@ -25,6 +29,7 @@ import {
   type FoodEstimateRequest,
   type FoodTextRequest,
   type TargetSuggestionRequest,
+  type WeeklyReviewRequest,
 } from './types'
 
 const ENDPOINT = 'https://api.openai.com/v1/chat/completions'
@@ -148,6 +153,19 @@ export function createOpenAiClient(config: AiClientConfig): AiClient {
         signal,
       )
       const parsed = TargetSuggestionSchema.safeParse(raw)
+      if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
+      return parsed.data
+    },
+
+    async reviewWeek(req: WeeklyReviewRequest, signal?: AbortSignal): Promise<WeeklyReviewResult> {
+      const raw = await callJson(
+        WEEKLY_SYSTEM_PROMPT,
+        [{ type: 'text', text: weeklyUserPrompt(req.profile, req.weightKg, req.targets, req.current, req.previous) }],
+        'weekly_review',
+        WEEKLY_REVIEW_JSON_SCHEMA,
+        signal,
+      )
+      const parsed = WeeklyReviewSchema.safeParse(raw)
       if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
       return parsed.data
     },

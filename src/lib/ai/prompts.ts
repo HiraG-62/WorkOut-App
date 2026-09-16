@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { ACTIVITY_LEVELS, GOALS, SEX, type Profile } from '../../types'
+import { ACTIVITY_LEVELS, GOALS, SEX, type Profile, type Targets } from '../../types'
+import type { WeekStats } from '../weekly'
 
 export const FoodEstimateSchema = z.object({
   items: z.array(
@@ -101,4 +102,47 @@ export function targetUserPrompt(profile: Profile, weightKg: number, currentTarg
     )
   }
   return `以下のプロフィールに合った1日の目標値を提案してください。\n${lines.join('\n')}`
+}
+
+export const WeeklyReviewSchema = z.object({
+  summary: z.string().describe('今週の総括を1〜2文で（日本語）。数字を1つは入れる'),
+  advice: z.string().describe('来週に向けた具体的な一言アドバイスを1〜2文で（日本語）。行動が1つに絞られていること'),
+  changeTargets: z.boolean().describe('目標値（カロリー/PFC）を変えたほうがよいなら true。変えなくてよければ false'),
+  suggestedTargets: z.object({
+    kcal: z.number().min(0),
+    protein: z.number().min(0),
+    fat: z.number().min(0),
+    carbs: z.number().min(0),
+  }).describe('changeTargets が true のときの新しい目標。false のときは現在の目標をそのまま入れる'),
+})
+
+export const WEEKLY_REVIEW_JSON_SCHEMA = z.toJSONSchema(WeeklyReviewSchema)
+
+export const WEEKLY_SYSTEM_PROMPT = `あなたは自宅で自重トレーニングをする人を支えるパーソナルトレーナー兼管理栄養士です。1週間のトレーニング・食事・体重の集計から、短い振り返りと来週の一言アドバイスを返します。
+- 数字は集計値をそのまま使い、根拠のない数値を作らない
+- 褒めるところは具体的に褒め、直すところは1つに絞る（あれもこれも言わない）
+- 消費カロリーは目安（誤差 ±30%）として扱い、それだけを根拠に食事量を決めさせない
+- 体重は日々の変動が大きいので、週平均どうしの比較で判断する
+- 記録が少ない週は、記録を続けること自体を来週の目標にしてよい
+- 目標値の変更は、体重の推移が目的（減量/維持/増量）と明らかに合っていない場合だけ提案する。変更する場合も一度に kcal で ±200 以内、タンパク質は体重×1.6〜2.2g の範囲
+- 専門用語を避け、口語で親しみやすく。出力はすべて日本語`
+
+function statsLines(label: string, s: WeekStats): string[] {
+  const intake = s.intake.days === 0 ? '食事の記録なし' : `平均 ${s.intake.kcal}kcal / P${s.intake.protein}g / F${s.intake.fat}g / C${s.intake.carbs}g（記録 ${s.intake.days}日）`
+  return [
+    `【${label}】${s.weekStart}〜${s.weekEnd}（集計 ${s.elapsedDays}日）`,
+    `トレ: ${s.workoutDays}日 / ${s.totalSets}セット / ${s.totalReps}回 + ${s.totalSeconds}秒 / 推定消費 約${s.burnKcal}kcal`,
+    `食事: ${intake}`,
+    `体重: ${s.weightAvg === null ? '記録なし' : `週平均 ${s.weightAvg}kg`}`,
+  ]
+}
+
+export function weeklyUserPrompt(profile: Profile, weightKg: number, targets: Targets, current: WeekStats, previous: WeekStats | null): string {
+  const lines = [
+    `目的: ${GOALS[profile.goal].label} / 性別: ${SEX[profile.sex]} / 年齢: ${profile.age}歳 / 身長: ${profile.heightCm}cm / 体重: ${weightKg}kg（最新） / 活動量: ${ACTIVITY_LEVELS[profile.activity].label}`,
+    `現在の目標: ${targets.kcal}kcal / P${targets.protein}g / F${targets.fat}g / C${targets.carbs}g`,
+    ...statsLines('今週', current),
+    ...(previous ? statsLines('前週', previous) : ['【前週】記録なし']),
+  ]
+  return `以下の1週間の記録を振り返り、来週の一言アドバイスをください。\n${lines.join('\n')}`
 }

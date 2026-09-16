@@ -1,3 +1,4 @@
+import type { Exercise } from '../../types'
 /**
  * 種目のフォーム図（棒人間の2ポーズ）とポイント。
  * 図は横から見た姿勢を 120x80 の座標で表す。y=72 が床。
@@ -307,4 +308,10 @@ export const EXERCISE_GUIDES: Record<string, ExerciseGuide> = {
 
 export function youtubeSearchUrl(name: string): string {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} やり方 フォーム`)}`
+}
+
+/** 種目の図のタイプ。自作種目は formFamily、初期種目はガイドから引く */
+export function resolveFamily(exercise: Pick<Exercise, 'id' | 'formFamily'> | null): FormFamily | undefined {
+  if (!exercise) return undefined
+  return exercise.formFamily ?? EXERCISE_GUIDES[exercise.id]?.family
 }

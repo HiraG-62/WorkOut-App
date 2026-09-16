@@ -8,6 +8,28 @@ const PROTEIN_PER_KG = { cut: 2.2, maintain: 1.8, bulk: 2.0 } as const
 const FAT_RATIO = 0.25
 const MIN_KCAL = 1200
 
+/** 目標値の入力・反映で許す範囲（設定画面の Stepper と AI 提案の反映で共通） */
+export const TARGET_LIMITS = {
+  kcal: { min: 800, max: 6000 },
+  protein: { min: 0, max: 400 },
+  fat: { min: 0, max: 300 },
+  carbs: { min: 0, max: 800 },
+} as const
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n))
+}
+
+/** AI 提案などの外部値を、範囲内の整数に丸める */
+export function clampTargets(t: Targets): Targets {
+  return {
+    kcal: clamp(Math.round(t.kcal), TARGET_LIMITS.kcal.min, TARGET_LIMITS.kcal.max),
+    protein: clamp(Math.round(t.protein), TARGET_LIMITS.protein.min, TARGET_LIMITS.protein.max),
+    fat: clamp(Math.round(t.fat), TARGET_LIMITS.fat.min, TARGET_LIMITS.fat.max),
+    carbs: clamp(Math.round(t.carbs), TARGET_LIMITS.carbs.min, TARGET_LIMITS.carbs.max),
+  }
+}
+
 /** Mifflin-St Jeor 式で基礎代謝を求める */
 export function bmr(profile: Profile, weightKg: number): number {
   const base = 10 * weightKg + 6.25 * profile.heightCm - 5 * profile.age

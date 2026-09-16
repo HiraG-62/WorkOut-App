@@ -21,6 +21,7 @@ import { PhotoPickers, usePhotoPicker } from '../features/meals/PhotoPickers'
 import { QuickMealSheet } from '../features/meals/QuickMealSheet'
 import { FoodFormSheet } from '../features/meals/FoodFormSheet'
 import { summarizeSets } from '../features/workout/useWorkoutStats'
+import { useDayBurn, useWeightInfo } from '../features/workout/useDayBurn'
 import './HomePage.css'
 
 const QUICK_LIMIT = 4
@@ -31,6 +32,8 @@ export function HomePage() {
   const today = useToday()
   const guard = useBusy()
   const { totals } = useDayMeals(today)
+  const burnKcal = useDayBurn(today)
+  const weightInfo = useWeightInfo()
   const { foods } = useFoods()
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(5).toArray(), [])
   const exerciseList = useLiveQuery(() => db.exercises.toArray(), [])
@@ -142,7 +145,7 @@ export function HomePage() {
         }
       >
         <Card>
-          <NutritionSummary totals={totals} targets={settings.targets} compact />
+          <NutritionSummary totals={totals} targets={settings.targets} compact burnKcal={burnKcal} addBurn={settings.addBurnToTarget} weightMissing={!weightInfo.recorded} />
         </Card>
         <div className="hp__meal-actions">
           {aiReady && (

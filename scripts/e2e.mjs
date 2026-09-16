@@ -174,6 +174,10 @@ try {
   await sleep(400)
   await shot('session-after-plank')
 
+  // 4b. 推定消費カロリーがセッションのメタ行に出る
+  const burnText = await textOf('.ws__burn')
+  assert(/kcal/.test(burnText), `セッションに推定消費カロリーが出る (${burnText})`)
+
   // 5. 終了
   await clickText('終了')
   await sleep(600)
@@ -296,15 +300,24 @@ try {
     confidence: 'high',
     note: 'モックの読み取り結果です',
   }
+  const mockWeekly = {
+    summary: '今週はトレ1日、3セット。まずは記録が始まったのが何より。',
+    advice: '来週はトレを2日に増やしてみよう。',
+    changeTargets: true,
+    suggestedTargets: { kcal: 2300, protein: 135, fat: 60, carbs: 300 },
+  }
   const mockOpenAi = (req) => {
     if (req.url().startsWith('https://api.openai.com/')) {
       // system prompt に「パッケージ」が含まれていれば成分表の読み取り、それ以外は食事の推定
-      const isLabel = (req.postData() ?? '').includes('nutrition_label')
+      const body = req.postData() ?? ''
+      const isLabel = body.includes('nutrition_label')
+      const isWeekly = body.includes('weekly_review')
+      const content = isWeekly ? mockWeekly : isLabel ? mockLabel : mockEstimate
       req.respond({
         status: 200,
         contentType: 'application/json',
         headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' },
-        body: JSON.stringify({ choices: [{ message: { content: JSON.stringify(isLabel ? mockLabel : mockEstimate) } }] }),
+        body: JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }] }),
       })
       return
     }
@@ -346,8 +359,43 @@ try {
   await sleep(600)
   const labelLogged = await page.$$eval('.mel__row', (els) => els.some((e) => e.textContent?.includes('サラダチキン')))
   assert(labelLogged, '成分表から登録した食品が今日の記録に入る')
+  // 8e. 記録タブ: 週の振り返り → AI の一言 → 目標提案を反映
+  await page.goto(`${BASE}#/log`, { waitUntil: 'networkidle0' })
+  await sleep(500)
+  const weekStats = await textOf('.wr__stats')
+  assert(/1日/.test(weekStats) && /セット/.test(weekStats) && /約[0-9]+kcal/.test(weekStats), `週の集計にトレ日数と消費カロリーが出る (${weekStats.slice(0, 60)})`)
+  await shot('weekly-stats')
+  await clickText('ChatGPT に来週の一言をもらう')
+  await page.waitForSelector('.wr__advice', { timeout: 8000 })
+  const advice = await textOf('.wr__advice')
+  assert(advice.includes('2日に増やして'), `AI の一言が保存・表示される (${advice})`)
+  await shot('weekly-ai')
+  await clickText('目標に反映')
+  await sleep(500)
+  const targetsApplied = await page.evaluate(async () => {
+    const req = indexedDB.open('workout-app')
+    return new Promise((resolve) => {
+      req.onsuccess = () => {
+        const get = req.result.transaction('settings').objectStore('settings').get('app')
+        get.onsuccess = () => resolve(get.result?.targets?.kcal)
+      }
+    })
+  })
+  assert(targetsApplied === 2300, `提案した目標が設定に反映される (${targetsApplied})`)
+  // 前の週へ移動しても壊れない
+  await clickLabel('前の週')
+  await sleep(300)
+  const prevLabel = await textOf('.wr__range-label')
+  assert(prevLabel === '先週', `前の週に移動できる (${prevLabel})`)
+  assert((await page.$('.wr__empty')) !== null, '記録のない週は空表示')
+  await clickLabel('次の週')
+  await sleep(300)
+  assert((await textOf('.wr__range-label')) === '今週', '今週に戻れる')
+
   page.off('request', mockOpenAi)
   await page.setRequestInterception(false)
+  await page.goto(`${BASE}#/meals`, { waitUntil: 'networkidle0' })
+  await sleep(400)
 
   // フード登録フォームに AI 推定ボタンが出る（名前を入れると有効）
   await clickText('フード登録')
@@ -361,10 +409,23 @@ try {
   await clickLabel('閉じる')
   await sleep(300)
 
-  // 9. ホーム（データあり）
+  // 9. ホーム（データあり）: 消費カロリーの行が出る。設定で目標に加算すると表示が変わる
   await page.goto(BASE, { waitUntil: 'networkidle0' })
   await sleep(500)
   await shot('home-with-data')
+  const homeBurn = await textOf('.nutri__burn')
+  assert(/トレで約/.test(homeBurn) && !homeBurn.includes('加算中'), `ホームに消費カロリーが出る (${homeBurn})`)
+  const ringBefore = await page.$eval('.nutri svg[role="img"]', (e) => e.getAttribute('aria-label'))
+  await page.goto(`${BASE}#/settings`, { waitUntil: 'networkidle0' })
+  await sleep(400)
+  await clickText('トレの消費カロリーを目標に加算', { tag: 'label' })
+  await sleep(500)
+  await page.goto(BASE, { waitUntil: 'networkidle0' })
+  await sleep(500)
+  const homeBurnOn = await textOf('.nutri__burn')
+  const ringAfter = await page.$eval('.nutri svg[role="img"]', (e) => e.getAttribute('aria-label'))
+  assert(homeBurnOn.includes('加算中') && ringBefore !== ringAfter, `加算ONで目標が増える (${ringBefore} → ${ringAfter})`)
+  await shot('home-burn-added')
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await sleep(300)
   await shot('home-with-data-bottom')

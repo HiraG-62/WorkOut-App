@@ -1,4 +1,5 @@
-import type { FoodEstimate, NutritionLabel, Profile, TargetSuggestion, Targets } from '../../types'
+import type { FoodEstimate, NutritionLabel, Profile, TargetSuggestion, Targets, WeeklyReviewResult } from '../../types'
+import type { WeekStats } from '../weekly'
 
 export interface FoodEstimateRequest {
   imageBase64: string
@@ -17,12 +18,23 @@ export interface TargetSuggestionRequest {
   currentTargets?: Targets
 }
 
+export interface WeeklyReviewRequest {
+  profile: Profile
+  /** 最新の体重 */
+  weightKg: number
+  targets: Targets
+  current: WeekStats
+  previous: WeekStats | null
+}
+
 export interface AiClient {
   estimateFood(req: FoodEstimateRequest, signal?: AbortSignal): Promise<FoodEstimate>
   estimateFoodFromText(req: FoodTextRequest, signal?: AbortSignal): Promise<FoodEstimate>
   /** 栄養成分表示の写真から数値を読み取る */
   readNutritionLabel(req: FoodEstimateRequest, signal?: AbortSignal): Promise<NutritionLabel>
   suggestTargets(req: TargetSuggestionRequest, signal?: AbortSignal): Promise<TargetSuggestion>
+  /** 1週間の集計から振り返りと来週の一言を作る */
+  reviewWeek(req: WeeklyReviewRequest, signal?: AbortSignal): Promise<WeeklyReviewResult>
 }
 
 export interface AiClientConfig {

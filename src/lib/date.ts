@@ -35,6 +35,12 @@ export function formatShort(key: string): string {
   return `${d.getMonth() + 1}/${d.getDate()} (${WEEKDAYS[d.getDay()]})`
 }
 
+/** 例: 9/16 */
+export function formatMonthDay(key: string): string {
+  const d = fromDateKey(key)
+  return `${d.getMonth() + 1}/${d.getDate()}`
+}
+
 /** 例: 9月16日 火曜日 */
 export function formatLong(key: string): string {
   const d = fromDateKey(key)

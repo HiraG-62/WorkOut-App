@@ -66,3 +66,19 @@
 .ws__danger .btn {
   color: var(--text-2);
 }
+
+.ws__burn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ws__burn svg {
+  color: var(--warning);
+  margin-right: 2px;
+}
+
+.ws__burn-note {
+  color: var(--text-3);
+  font-size: 11px;
+}

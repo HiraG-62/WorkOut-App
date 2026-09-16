@@ -1,0 +1,89 @@
+name: CI / Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: 型チェック・lint・ビルド・E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 依存関係をインストール
+        run: npm ci
+
+      - name: 型チェック
+        run: npm run typecheck
+
+      - name: lint
+        run: npm run lint
+
+      - name: ビルド
+        run: npm run build
+
+      - name: 日本語フォント（スクリーンショット用）
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk > /dev/null
+
+      - name: E2E（開発サーバーに対して自動操作）
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          npx vite --port 5199 --strictPort > /tmp/vite.log 2>&1 &
+          npx wait-on http://localhost:5199 --timeout 60000
+          npm run e2e
+          npm run migration:check
+
+      - name: PWA 登録確認（本番ビルド）
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          npx vite preview --port 4173 --strictPort > /tmp/preview.log 2>&1 &
+          npx wait-on http://localhost:4173 --timeout 60000
+          npm run pwa:check
+
+      - name: スクリーンショットを保存
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-shots
+          path: e2e-shots
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: dist を保存（デプロイ用）
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: GitHub Pages へデプロイ
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: デプロイ
+        id: deployment
+        uses: actions/deploy-pages@v4

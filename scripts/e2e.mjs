@@ -6,7 +6,7 @@ import { join } from 'node:path'
 
 const BASE = process.argv[2] ?? 'http://localhost:5199/'
 const OUT = process.argv[3] ?? 'e2e-shots'
-const CHROME = process.env.CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+const CHROME = process.env.CHROME_PATH ?? (process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : '/usr/bin/google-chrome')
 const VIEWPORT = { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
 
 mkdirSync(OUT, { recursive: true })

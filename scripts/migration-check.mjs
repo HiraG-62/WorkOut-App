@@ -2,7 +2,7 @@
 import puppeteer from 'puppeteer-core'
 
 const BASE = process.argv[2] ?? 'http://localhost:5199/'
-const CHROME = process.env.CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+const CHROME = process.env.CHROME_PATH ?? (process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : '/usr/bin/google-chrome')
 
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox'] })
 const page = await browser.newPage()

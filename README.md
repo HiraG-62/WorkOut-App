@@ -39,6 +39,17 @@ React 19 / Vite 8 / TypeScript / Dexie / react-router (HashRouter) / vite-plugin
 
 AI 連携はブラウザから各社 API を直接呼びます（Claude は `@anthropic-ai/sdk` の `dangerouslyAllowBrowser`、OpenAI と Gemini は `fetch`）。キーは端末の IndexedDB にのみ保存し、バックアップにも含めません。
 
-## デプロイ
+## デプロイ / CI
 
-`vite.config.ts` の `base` は `./` なので、`dist/` を任意の静的ホスティング（GitHub Pages 等）のサブパスに置けます。PWA のカメラ利用には HTTPS が必要です。
+- `main` に push すると GitHub Actions（`.github/workflows/ci-deploy.yml`）が 型チェック → lint → ビルド → E2E → PWA 確認 を実行し、通れば GitHub Pages に自動デプロイします
+- 公開 URL: https://hirag-62.github.io/WorkOut-App/
+- PR でも同じチェックが走ります（デプロイはしない）。E2E のスクリーンショットは Actions の Artifacts（`e2e-shots`）から見られます
+- 手動で再デプロイしたいときは Actions の「CI / Deploy」→ Run workflow
+
+`vite.config.ts` の `base` は `./` なので、サブパス配下でもそのまま動きます。PWA のカメラ利用には HTTPS が必要です（GitHub Pages は HTTPS）。
+
+### スマホで使う
+
+1. iPhone は Safari、Android は Chrome で上の URL を開く
+2. 「ホーム画面に追加」でアプリとして起動できる（全画面・オフライン対応）
+3. AI 機能を使う場合は 設定 → AI で API キーを入力（端末内にのみ保存）

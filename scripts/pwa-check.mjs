@@ -1,11 +1,12 @@
 import puppeteer from 'puppeteer-core'
-const browser = await puppeteer.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--no-sandbox'] })
+const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH ?? (process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : '/usr/bin/google-chrome'), headless: true, args: ['--no-sandbox'] })
 const page = await browser.newPage()
 await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 })
 const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
-await page.goto('http://localhost:4173/', { waitUntil: 'networkidle0' })
+const BASE = process.argv[2] ?? 'http://localhost:4173/'
+await page.goto(BASE, { waitUntil: 'networkidle0' })
 await new Promise((r) => setTimeout(r, 2500))
 const info = await page.evaluate(async () => {
   const reg = await navigator.serviceWorker?.getRegistration()

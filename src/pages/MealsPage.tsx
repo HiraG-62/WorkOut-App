@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { PhotoPickers, usePhotoPicker } from '../features/meals/PhotoPickers'
 import { Camera, ChevronLeft, ChevronRight, CopyPlus, Layers, MessageSquareText, ScanText, Search, UtensilsCrossed, Zap } from 'lucide-react'
 import { copyMeals, uncopyMeals } from '../db/repo'
 import { addDays, formatRelative } from '../lib/date'
@@ -46,6 +47,16 @@ export function MealsPage() {
   const { entries, totals } = useDayMeals(date)
   const { foods } = useFoods()
   const [sheet, setSheet] = useState<SheetKind>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [labelFile, setLabelFile] = useState<File | null>(null)
+  const photo = usePhotoPicker((file) => {
+    setPhotoFile(file)
+    setSheet('photo')
+  })
+  const label = usePhotoPicker((file) => {
+    setLabelFile(file)
+    setSheet('label')
+  })
   const isToday = date === today
   const aiReady = isAiConfigured(settings.ai)
 
@@ -81,13 +92,13 @@ export function MealsPage() {
       <div className="mp__actions">
         {aiReady && (
           <>
-            <Button variant="primary" icon={<Camera size={18} aria-hidden />} onClick={() => setSheet('photo')}>
+            <Button variant="primary" icon={<Camera size={18} aria-hidden />} onClick={photo.open}>
               写真
             </Button>
             <Button variant="primary" icon={<MessageSquareText size={18} aria-hidden />} onClick={() => setSheet('talk')}>
               AIに話す
             </Button>
-            <Button variant="accent-soft" icon={<ScanText size={18} aria-hidden />} onClick={() => setSheet('label')}>
+            <Button variant="accent-soft" icon={<ScanText size={18} aria-hidden />} onClick={label.open}>
               成分表を撮る
             </Button>
           </>
@@ -129,9 +140,10 @@ export function MealsPage() {
       <FoodPickerSheet open={sheet === 'picker'} onClose={() => setSheet(null)} foods={foods} date={date} />
       <FoodFormSheet open={sheet === 'form'} onClose={() => setSheet(null)} />
       <QuickMealSheet open={sheet === 'quick'} onClose={() => setSheet(null)} date={date} />
-      <AiMealSheet open={sheet === 'photo'} onClose={() => setSheet(null)} date={date} mode="photo" />
+      <PhotoPickers photo={photo} label={label} />
+      <AiMealSheet open={sheet === 'photo'} onClose={() => setSheet(null)} date={date} mode="photo" initialFile={photoFile} />
       <AiMealSheet open={sheet === 'talk'} onClose={() => setSheet(null)} date={date} mode="text" />
-      <NutritionLabelSheet open={sheet === 'label'} onClose={() => setSheet(null)} date={date} />
+      <NutritionLabelSheet open={sheet === 'label'} onClose={() => setSheet(null)} date={date} initialFile={labelFile} />
       <MealSetsSheet open={sheet === 'sets'} onClose={() => setSheet(null)} date={date} todayEntries={entries} />
     </div>
   )

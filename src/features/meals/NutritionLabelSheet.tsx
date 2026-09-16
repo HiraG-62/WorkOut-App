@@ -16,7 +16,6 @@ import './AiMealSheet.css'
 import './NutritionLabelSheet.css'
 
 const AI_TIMEOUT_MS = 90_000
-const CAMERA_AUTO_OPEN_DELAY_MS = 250
 const DEFAULT_UNIT = '1食'
 const QTY_STEP = 0.5
 const QTY_MIN = 0.5
@@ -27,6 +26,8 @@ interface NutritionLabelSheetProps {
   open: boolean
   onClose: () => void
   date: string
+  /** ページ側のファイル入力で選んだ写真 */
+  initialFile?: File | null
 }
 
 type Phase = 'input' | 'loading' | 'result'
@@ -56,7 +57,7 @@ function basisToUnit(basis: string): string {
 }
 
 /** 商品パッケージ（栄養成分表示 / 原材料名）を撮って、マイフードに登録・記録する */
-export function NutritionLabelSheet({ open, onClose, date }: NutritionLabelSheetProps) {
+export function NutritionLabelSheet({ open, onClose, date, initialFile = null }: NutritionLabelSheetProps) {
   const settings = useSettings()
   const toast = useToast()
   const guard = useBusy()
@@ -86,23 +87,26 @@ export function NutritionLabelSheet({ open, onClose, date }: NutritionLabelSheet
     setError('')
   }, [open])
 
-  // 開いたら即カメラ
-  useEffect(() => {
-    if (!open || phase !== 'input' || image) return
-    const id = window.setTimeout(() => fileRef.current?.click(), CAMERA_AUTO_OPEN_DELAY_MS)
-    return () => window.clearTimeout(id)
-  }, [open, phase, image])
-
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
+  const loadFile = async (file: File) => {
     try {
       setImage(await encodeImageForAi(file))
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : '画像を読み込めませんでした')
     }
+  }
+
+  // ページ側で選んだ写真があればそれを読み込む（リセットの effect より後に置く）
+  useEffect(() => {
+    if (!open || !initialFile) return
+    void loadFile(initialFile)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialFile])
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) await loadFile(file)
   }
 
   const read = async () => {

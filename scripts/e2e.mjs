@@ -333,11 +333,10 @@ try {
   assert(menuChip, '登録したメニューが「よく食べるもの」に出る')
 
   // 8d. 成分表を撮る → 読み取り結果を登録して記録
-  await clickText('成分表を撮る')
-  await sleep(500)
-  const labelInput = await page.$('input[aria-label="パッケージの写真を選ぶ"]')
+  // ボタンを押すと OS の写真選択が直接開く（ページ側の file input）。E2E では直接ファイルを投入する
+  const labelInput = await page.$('input[aria-label="成分表・原材料の写真を選ぶ"]')
   await labelInput.uploadFile('public/icons/icon-192.png')
-  await sleep(400)
+  await sleep(600)
   await clickText('ChatGPT で読み取る')
   await page.waitForSelector('.nl__pfc', { timeout: 8000 })
   const labelName = await page.$eval('.sheet input[placeholder="商品名"]', (e) => e.value)

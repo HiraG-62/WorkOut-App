@@ -13,7 +13,7 @@ import { AI_PROVIDERS, type FoodEstimate, type FoodEstimateItem } from '../../ty
 import './AiMealSheet.css'
 
 const AI_TIMEOUT_MS = 90_000
-const CAMERA_AUTO_OPEN_DELAY_MS = 250
+const FOCUS_DELAY_MS = 250
 const DEFAULT_UNIT = '1食'
 const CONFIDENCE_LABEL = { low: '自信なし', medium: 'まあまあ', high: '自信あり' } as const
 const TEXT_EXAMPLES = ['牛丼の並盛とサラダ、缶コーヒー', '鮭おにぎり2個とみそ汁', 'ラーメン大盛りと餃子6個'] as const
@@ -27,6 +27,8 @@ interface AiMealSheetProps {
   onClose: () => void
   date: string
   mode: AiMealMode
+  /** ページ側のファイル入力で選んだ写真。OS のカメラ/ライブラリをボタン1タップで開くために、シートより先に選ぶ */
+  initialFile?: File | null
 }
 
 type Phase = 'input' | 'loading' | 'result'
@@ -36,7 +38,7 @@ interface ResultItem extends FoodEstimateItem {
   saveAsFood: boolean
 }
 
-export function AiMealSheet({ open, onClose, date, mode }: AiMealSheetProps) {
+export function AiMealSheet({ open, onClose, date, mode, initialFile = null }: AiMealSheetProps) {
   const settings = useSettings()
   const toast = useToast()
   const guard = useBusy()
@@ -74,26 +76,33 @@ export function AiMealSheet({ open, onClose, date, mode }: AiMealSheetProps) {
     setMenuName('')
   }, [open])
 
-  // 写真モードは開いたら即カメラ、文章モードは即入力欄へ（タップ数を減らす）
-  useEffect(() => {
-    if (!open || phase !== 'input') return
-    const id = window.setTimeout(() => {
-      if (mode === 'photo' && !image) fileRef.current?.click()
-      if (mode === 'text') textRef.current?.focus()
-    }, CAMERA_AUTO_OPEN_DELAY_MS)
-    return () => window.clearTimeout(id)
-  }, [open, phase, mode, image])
-
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
+  const loadFile = async (file: File) => {
     try {
       setImage(await encodeImageForAi(file))
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : '画像を読み込めませんでした')
     }
+  }
+
+  // ページ側で選んだ写真があればそれを読み込む（リセットの effect より後に置く）
+  useEffect(() => {
+    if (!open || !initialFile) return
+    void loadFile(initialFile)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialFile])
+
+  // 文章モードは開いたら即入力欄へ
+  useEffect(() => {
+    if (!open || phase !== 'input' || mode !== 'text') return
+    const id = window.setTimeout(() => textRef.current?.focus(), FOCUS_DELAY_MS)
+    return () => window.clearTimeout(id)
+  }, [open, phase, mode])
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) await loadFile(file)
   }
 
   const canEstimate = mode === 'photo' ? image !== null : text.trim().length > 0

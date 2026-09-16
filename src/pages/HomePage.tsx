@@ -17,6 +17,7 @@ import { useDayMeals } from '../features/meals/useDayMeals'
 import { useFoods } from '../features/meals/useFoods'
 import { QuickFoods } from '../features/meals/QuickFoods'
 import { AiMealSheet } from '../features/meals/AiMealSheet'
+import { PhotoPickers, usePhotoPicker } from '../features/meals/PhotoPickers'
 import { QuickMealSheet } from '../features/meals/QuickMealSheet'
 import { FoodFormSheet } from '../features/meals/FoodFormSheet'
 import { summarizeSets } from '../features/workout/useWorkoutStats'
@@ -40,6 +41,11 @@ export function HomePage() {
   const ready = workouts !== undefined && exerciseList !== undefined
   const todaySets = useLiveQuery(async () => (todayWorkout ? db.sets.where('workoutId').equals(todayWorkout.id).toArray() : []), [todayWorkout?.id])
   const [photoOpen, setPhotoOpen] = useState(false)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const photo = usePhotoPicker((file) => {
+    setPhotoFile(file)
+    setPhotoOpen(true)
+  })
   const [talkOpen, setTalkOpen] = useState(false)
   const [quickOpen, setQuickOpen] = useState(false)
   const [foodFormOpen, setFoodFormOpen] = useState(false)
@@ -141,7 +147,7 @@ export function HomePage() {
         <div className="hp__meal-actions">
           {aiReady && (
             <>
-              <Button variant="primary" icon={<Camera size={18} aria-hidden />} onClick={() => setPhotoOpen(true)} block>
+              <Button variant="primary" icon={<Camera size={18} aria-hidden />} onClick={photo.open} block>
                 写真
               </Button>
               <Button variant="primary" icon={<MessageSquareText size={18} aria-hidden />} onClick={() => setTalkOpen(true)} block>
@@ -156,7 +162,8 @@ export function HomePage() {
         {foods.length > 0 && <QuickFoods foods={foods} date={today} limit={QUICK_LIMIT} onMore={() => navigate('/meals')} onAdd={() => setFoodFormOpen(true)} />}
       </Section>
 
-      <AiMealSheet open={photoOpen} onClose={() => setPhotoOpen(false)} date={today} mode="photo" />
+      <PhotoPickers photo={photo} />
+      <AiMealSheet open={photoOpen} onClose={() => setPhotoOpen(false)} date={today} mode="photo" initialFile={photoFile} />
       <AiMealSheet open={talkOpen} onClose={() => setTalkOpen(false)} date={today} mode="text" />
       <QuickMealSheet open={quickOpen} onClose={() => setQuickOpen(false)} date={today} />
       <FoodFormSheet open={foodFormOpen} onClose={() => setFoodFormOpen(false)} />

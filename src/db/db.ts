@@ -49,6 +49,19 @@ class WorkoutDB extends Dexie {
       weights: 'id, &date',
       settings: 'id',
     })
+    // v2: 初期種目に並び順を持たせる（既存DBは id から逆引きして付与）
+    this.version(2)
+      .stores({})
+      .upgrade(async (tx) => {
+        const orderById = new Map(SEED_EXERCISES.map((e) => [e.id, e.order]))
+        await tx
+          .table('exercises')
+          .toCollection()
+          .modify((ex: Exercise) => {
+            const order = orderById.get(ex.id)
+            if (order !== undefined) ex.order = order
+          })
+      })
     this.on('populate', () => {
       void this.exercises.bulkAdd(SEED_EXERCISES)
       void this.settings.add(DEFAULT_SETTINGS)

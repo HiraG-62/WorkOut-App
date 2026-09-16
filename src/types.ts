@@ -25,6 +25,8 @@ export interface Exercise {
   restSec?: number
   /** 難易度を上げる時の次の種目 */
   progressionId?: string
+  /** 一覧の並び順（初期種目は部位→難易度順）。未設定のユーザー作成種目は末尾 */
+  order?: number
   isCustom: boolean
   archived: boolean
   createdAt: number

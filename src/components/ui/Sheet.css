@@ -43,9 +43,13 @@
 }
 
 .sheet__grip {
-  padding: var(--s-3) 0 var(--s-1);
+  padding: var(--s-4) 0 var(--s-2);
   touch-action: none;
   cursor: grab;
+}
+
+.sheet__head {
+  touch-action: none;
 }
 
 .sheet__handle {

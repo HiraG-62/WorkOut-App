@@ -52,9 +52,10 @@ const seed: SeedExercise[] = [
   { id: 'ex_jumping_jack', name: 'ジャンピングジャック', type: 'reps', bodyPart: 'full' },
 ]
 
-export const SEED_EXERCISES: Exercise[] = seed.map((e) => ({
+export const SEED_EXERCISES: Exercise[] = seed.map((e, i) => ({
   ...e,
   useWeight: e.useWeight ?? false,
+  order: i,
   isCustom: false,
   archived: false,
   createdAt: 0,

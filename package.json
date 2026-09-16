@@ -11,7 +11,8 @@
     "e2e": "node scripts/e2e.mjs http://localhost:5199/ e2e-shots",
     "dev:e2e": "vite --port 5199 --strictPort",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
-    "pwa:check": "node scripts/pwa-check.mjs"
+    "pwa:check": "node scripts/pwa-check.mjs",
+    "migration:check": "node scripts/migration-check.mjs http://localhost:5199/"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",

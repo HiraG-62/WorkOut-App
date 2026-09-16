@@ -116,6 +116,8 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
   const dragStartY = useRef<number | null>(null)
   const onDragStart = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
+    // 閉じるボタンはドラッグ対象にしない
+    if (e.target instanceof Element && e.target.closest('.sheet__close')) return
     dragStartY.current = e.clientY
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
@@ -152,7 +154,7 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
         <div className="sheet__grip" onPointerDown={onDragStart} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}>
           <div className="sheet__handle" aria-hidden />
         </div>
-        <div className="sheet__head">
+        <div className="sheet__head" onPointerDown={onDragStart} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}>
           {title && (
             <h2 id={titleId} className="sheet__title">
               {title}

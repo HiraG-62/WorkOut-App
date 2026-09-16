@@ -38,12 +38,13 @@ async function shot(name) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 /** テキストを含むボタンをクリックする */
-async function clickText(text, { tag = 'button', index = 0, timeout = 4000 } = {}) {
+async function clickText(text, { tag = 'button', index = 0, timeout = 4000, exact = false } = {}) {
   const deadline = Date.now() + timeout
   while (Date.now() < deadline) {
     const ok = await page.evaluate(
-      (t, tg, idx) => {
-        const els = [...document.querySelectorAll(tg)].filter((e) => e.textContent?.replace(/\s+/g, ' ').includes(t) && !e.disabled)
+      (t, tg, idx, ex) => {
+        const norm = (e) => e.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+        const els = [...document.querySelectorAll(tg)].filter((e) => (ex ? norm(e) === t : norm(e).includes(t)) && !e.disabled)
         const el = els[idx]
         if (!el) return false
         el.scrollIntoView({ block: 'center' })
@@ -53,11 +54,25 @@ async function clickText(text, { tag = 'button', index = 0, timeout = 4000 } = {
       text,
       tag,
       index,
+      exact,
     )
     if (ok) return
     await sleep(100)
   }
   throw new Error(`button not found: ${text}`)
+}
+
+/** 種目ピッカーで名前が完全一致する行を選ぶ */
+async function pickExercise(name) {
+  const ok = await page.evaluate((n) => {
+    const span = [...document.querySelectorAll('.ep__name')].find((e) => e.textContent?.trim() === n)
+    const btn = span?.closest('button')
+    if (!btn || btn.disabled) return false
+    btn.scrollIntoView({ block: 'center' })
+    btn.click()
+    return true
+  }, name)
+  if (!ok) throw new Error(`exercise not found: ${name}`)
 }
 
 async function clickLabel(label, { timeout = 4000 } = {}) {
@@ -120,9 +135,9 @@ try {
   await clickText('種目を選んで開始')
   await sleep(400)
   await shot('exercise-picker')
-  await clickText('腕立て伏せ', { index: 0 })
-  await clickText('スクワット', { index: 0 })
-  await clickText('プランク', { index: 0 })
+  await pickExercise('腕立て伏せ')
+  await pickExercise('スクワット')
+  await pickExercise('プランク')
   await clickText('3種目を選んで開始')
   await sleep(600)
   await shot('session-start')

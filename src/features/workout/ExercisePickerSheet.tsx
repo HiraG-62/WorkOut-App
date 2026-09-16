@@ -39,7 +39,9 @@ export function ExercisePickerSheet({ open, onClose, exercises, selectedIds, rec
       const i = recentIds.indexOf(id)
       return i === -1 ? Number.MAX_SAFE_INTEGER : i
     }
-    return [...searched].sort((a, b) => recentRank(a.id) - recentRank(b.id))
+    // 最近使った順 → 初期種目の並び（部位→難易度） → 名前
+    const orderOf = (e: Exercise) => e.order ?? Number.MAX_SAFE_INTEGER
+    return [...searched].sort((a, b) => recentRank(a.id) - recentRank(b.id) || orderOf(a) - orderOf(b) || a.name.localeCompare(b.name, 'ja'))
   }, [exercises, q, filter, recentIds])
 
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))

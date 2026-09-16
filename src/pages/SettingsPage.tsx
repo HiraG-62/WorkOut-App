@@ -235,7 +235,7 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
               {showKey ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
             </button>
           </div>
-          <TextField label="モデル" value={ai.models[provider]} onChange={(e) => setModel(e.target.value)} hint={`空欄なら既定値 ${AI_PROVIDERS[provider].defaultModel}`} placeholder={AI_PROVIDERS[provider].defaultModel} autoCapitalize="off" spellCheck={false} />
+          <TextField label="モデル" value={ai.models[provider]} onChange={(e) => setModel(e.target.value)} hint="空欄なら既定値を使います" placeholder={AI_PROVIDERS[provider].defaultModel} autoCapitalize="off" spellCheck={false} />
         </Card>
       </Section>
 

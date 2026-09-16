@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { deleteMeal, logQuickMeal } from '../../db/repo'
 import { tapHaptic } from '../../lib/feedback'
 import { Sheet } from '../../components/ui/Sheet'
@@ -119,7 +120,7 @@ export function QuickMealSheet({ open, onClose, date }: QuickMealSheetProps) {
             <Stepper value={carbs} onChange={setCarbs} step={G_STEP} max={G_MAX} unit="g" label="炭水化物" />
           </div>
         ) : (
-          <Button variant="ghost" size="sm" onClick={() => setDetail(true)}>
+          <Button variant="ghost" size="sm" icon={<Plus size={16} aria-hidden />} onClick={() => setDetail(true)}>
             脂質・炭水化物も入力する
           </Button>
         )}

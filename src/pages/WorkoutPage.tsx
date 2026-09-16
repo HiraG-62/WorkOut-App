@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronRight, Dumbbell, ListPlus, Play, Repeat } from 'lucide-react'
+import { ChevronRight, Dumbbell, ListPlus, Play, Plus, Repeat } from 'lucide-react'
 import { db } from '../db/db'
 import { createWorkout } from '../db/repo'
 import { formatDuration, formatRelative } from '../lib/date'
@@ -10,6 +10,7 @@ import { useBusy } from '../hooks/useBusy'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, Section } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
+import { Button } from '../components/ui/Button'
 import { ExercisePickerSheet } from '../features/workout/ExercisePickerSheet'
 import { useRecentExerciseIds } from '../features/workout/useRecentExerciseIds'
 import { summarizeSets } from '../features/workout/useWorkoutStats'
@@ -66,7 +67,7 @@ export function WorkoutPage() {
     <div className="page wp">
       <PageHeader title="トレーニング" />
 
-      {todayWorkout ? (
+      {todayWorkout && (
         <Card accent className="wp__today" onClick={() => navigate(`/workout/${todayWorkout.id}`)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate(`/workout/${todayWorkout.id}`)}>
           <div className="wp__today-head">
             <span className="wp__today-title">{todayWorkout.endedAt ? '今日は完了' : '進行中'}</span>
@@ -78,7 +79,13 @@ export function WorkoutPage() {
             <ChevronRight size={18} aria-hidden />
           </div>
         </Card>
-      ) : (
+      )}
+      {todayWorkout?.endedAt && (
+        <Button variant="ghost" size="sm" icon={<Plus size={16} aria-hidden />} onClick={() => setPickerOpen(true)} className="wp__again">
+          今日もう1回始める
+        </Button>
+      )}
+      {!todayWorkout && (
         <div className="stack">
           {lastWorkout ? (
             <button type="button" className="wp__start wp__start--primary" onClick={() => void startFromLast()}>

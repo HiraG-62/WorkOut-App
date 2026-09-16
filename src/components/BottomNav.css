@@ -12,6 +12,13 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--border);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+/* キーボード表示中はナビを隠す（入力欄を覆わない・縮んだ画面を圧迫しない） */
+body.kb-open .bottom-nav {
+  transform: translateY(100%);
+  pointer-events: none;
 }
 
 .bottom-nav__item {

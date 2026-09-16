@@ -7,6 +7,27 @@
   justify-content: flex-end;
 }
 
+/* キーボード表示中は可視領域（visualViewport）に合わせて位置と高さを追従させる（src/lib/keyboard.ts が変数を更新） */
+body.kb-open .sheet-root {
+  top: var(--vv-top, 0px);
+  height: var(--vv-h, 100dvh);
+  bottom: auto;
+}
+
+body.kb-open .sheet,
+body.kb-open .sheet--tall {
+  max-height: var(--vv-h, 88dvh);
+  height: auto;
+}
+
+body.kb-open .sheet--tall {
+  height: var(--vv-h, 88dvh);
+}
+
+body.kb-open .sheet__footer {
+  padding-bottom: var(--s-3);
+}
+
 .sheet__scrim {
   position: absolute;
   inset: 0;

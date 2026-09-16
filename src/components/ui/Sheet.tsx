@@ -4,7 +4,6 @@ import { X } from 'lucide-react'
 import './Sheet.css'
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-const KEYBOARD_THRESHOLD_PX = 120
 /** ハンドル部分をこれ以上下にドラッグしたら閉じる */
 const SWIPE_CLOSE_PX = 80
 const ROOT_ID = 'root'
@@ -93,26 +92,6 @@ export function Sheet({ open, onClose, title, children, tall = false, footer }: 
     if (!open || !panel) return
     // React の autoFocus で既に入力へフォーカスが移っていればそれを尊重する
     if (!panel.contains(document.activeElement)) panel.focus()
-  }, [open])
-
-  // ソフトウェアキーボード表示中はシートの高さを可視領域に合わせ、フッターが隠れないようにする
-  useEffect(() => {
-    if (!open) return
-    const vv = window.visualViewport
-    const panel = panelRef.current
-    if (!vv || !panel) return
-    const apply = () => {
-      const keyboardOpen = vv.height < window.innerHeight - KEYBOARD_THRESHOLD_PX
-      panel.style.maxHeight = keyboardOpen ? `${vv.height}px` : ''
-      panel.style.height = keyboardOpen && panel.classList.contains('sheet--tall') ? `${vv.height}px` : ''
-    }
-    vv.addEventListener('resize', apply)
-    apply()
-    return () => {
-      vv.removeEventListener('resize', apply)
-      panel.style.maxHeight = ''
-      panel.style.height = ''
-    }
   }, [open])
 
   // ヘッダーを下にスワイプして閉じる

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Camera, ChevronLeft, ChevronRight, CopyPlus, Layers, Search, UtensilsCrossed, Zap } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, CopyPlus, Layers, MessageSquareText, Search, UtensilsCrossed, Zap } from 'lucide-react'
 import { copyMeals, uncopyMeals } from '../db/repo'
 import { addDays, formatRelative } from '../lib/date'
 import { useToday } from '../hooks/useToday'
@@ -19,14 +19,14 @@ import { MealEntryList } from '../features/meals/MealEntryList'
 import { FoodPickerSheet } from '../features/meals/FoodPickerSheet'
 import { FoodFormSheet } from '../features/meals/FoodFormSheet'
 import { QuickMealSheet } from '../features/meals/QuickMealSheet'
-import { PhotoEstimateSheet } from '../features/meals/PhotoEstimateSheet'
+import { AiMealSheet } from '../features/meals/AiMealSheet'
 import { MealSetsSheet } from '../features/meals/MealSetsSheet'
 import './MealsPage.css'
 
 const QUICK_LIMIT = 6
 const UNDO_MS = 6000
 
-type SheetKind = 'picker' | 'form' | 'quick' | 'photo' | 'sets' | null
+type SheetKind = 'picker' | 'form' | 'quick' | 'photo' | 'talk' | 'sets' | null
 
 export function MealsPage() {
   const settings = useSettings()
@@ -77,11 +77,16 @@ export function MealsPage() {
         }
       />
 
-      <div className={`mp__actions ${aiReady ? 'mp__actions--five' : ''}`}>
+      <div className="mp__actions">
         {aiReady && (
-          <Button variant="primary" icon={<Camera size={18} aria-hidden />} onClick={() => setSheet('photo')}>
-            写真
-          </Button>
+          <>
+            <Button variant="primary" icon={<Camera size={18} aria-hidden />} onClick={() => setSheet('photo')}>
+              写真
+            </Button>
+            <Button variant="primary" icon={<MessageSquareText size={18} aria-hidden />} onClick={() => setSheet('talk')}>
+              AIに話す
+            </Button>
+          </>
         )}
         <Button variant={aiReady ? 'secondary' : 'primary'} icon={<Zap size={18} aria-hidden />} onClick={() => setSheet('quick')}>
           ざっくり
@@ -110,7 +115,7 @@ export function MealsPage() {
           <EmptyState
             icon={<UtensilsCrossed size={24} />}
             title="まだ記録がありません"
-            description={aiReady ? '写真を撮るか、「ざっくり」で目安だけ残しましょう。よく食べるものを登録すると次からワンタップです' : '「ざっくり」なら数値の目安だけで10秒で記録できます。よく食べるものを登録すると次からワンタップです'}
+            description={aiReady ? '写真を撮るか「AIに話す」で食べたものを伝えるだけ。よく食べるものを登録すると次からワンタップです' : '「ざっくり」なら数値の目安だけで10秒で記録できます。よく食べるものを登録すると次からワンタップです'}
           />
         ) : (
           <MealEntryList entries={entries} />
@@ -120,7 +125,8 @@ export function MealsPage() {
       <FoodPickerSheet open={sheet === 'picker'} onClose={() => setSheet(null)} foods={foods} date={date} />
       <FoodFormSheet open={sheet === 'form'} onClose={() => setSheet(null)} />
       <QuickMealSheet open={sheet === 'quick'} onClose={() => setSheet(null)} date={date} />
-      <PhotoEstimateSheet open={sheet === 'photo'} onClose={() => setSheet(null)} date={date} />
+      <AiMealSheet open={sheet === 'photo'} onClose={() => setSheet(null)} date={date} mode="photo" />
+      <AiMealSheet open={sheet === 'talk'} onClose={() => setSheet(null)} date={date} mode="text" />
       <MealSetsSheet open={sheet === 'sets'} onClose={() => setSheet(null)} date={date} todayEntries={entries} />
     </div>
   )

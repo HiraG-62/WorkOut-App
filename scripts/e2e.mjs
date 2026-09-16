@@ -242,6 +242,23 @@ try {
   await sleep(300)
   await shot('settings-bottom')
 
+  // 8b. AIキーを設定すると「写真」「AIに話す」が出て、話すシートに入力欄がある（通信はしない）
+  await page.goto(`${BASE}#/settings`, { waitUntil: 'networkidle0' })
+  await sleep(400)
+  await typeInto('input[type="password"]', 'sk-dummy-for-e2e')
+  await sleep(700)
+  await page.goto(`${BASE}#/meals`, { waitUntil: 'networkidle0' })
+  await sleep(400)
+  await clickText('AIに話す')
+  await sleep(400)
+  await page.waitForSelector('.am__text', { timeout: 3000 })
+  await page.type('.am__text', '牛丼の並盛とサラダ')
+  await shot('ai-talk')
+  const estimateEnabled = await page.$eval('.sheet__footer .btn', (b) => !b.disabled)
+  assert(estimateEnabled, 'AIに話す: 入力すると推定ボタンが有効になる')
+  await clickLabel('閉じる')
+  await sleep(300)
+
   // 9. ホーム（データあり）
   await page.goto(BASE, { waitUntil: 'networkidle0' })
   await sleep(500)

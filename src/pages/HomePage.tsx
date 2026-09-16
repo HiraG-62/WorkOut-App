@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate } from 'react-router-dom'
-import { Camera, ChevronRight, Dumbbell, Play, Repeat, Settings, Sparkles, Zap } from 'lucide-react'
+import { Camera, ChevronRight, Dumbbell, MessageSquareText, Play, Repeat, Settings, Sparkles, Zap } from 'lucide-react'
 import { db } from '../db/db'
 import { createWorkout, updateSettings } from '../db/repo'
 import { formatDuration, formatLong } from '../lib/date'
@@ -16,7 +16,7 @@ import { WeightQuick } from '../features/weight/WeightQuick'
 import { useDayMeals } from '../features/meals/useDayMeals'
 import { useFoods } from '../features/meals/useFoods'
 import { QuickFoods } from '../features/meals/QuickFoods'
-import { PhotoEstimateSheet } from '../features/meals/PhotoEstimateSheet'
+import { AiMealSheet } from '../features/meals/AiMealSheet'
 import { QuickMealSheet } from '../features/meals/QuickMealSheet'
 import { FoodFormSheet } from '../features/meals/FoodFormSheet'
 import { summarizeSets } from '../features/workout/useWorkoutStats'
@@ -40,6 +40,7 @@ export function HomePage() {
   const ready = workouts !== undefined && exerciseList !== undefined
   const todaySets = useLiveQuery(async () => (todayWorkout ? db.sets.where('workoutId').equals(todayWorkout.id).toArray() : []), [todayWorkout?.id])
   const [photoOpen, setPhotoOpen] = useState(false)
+  const [talkOpen, setTalkOpen] = useState(false)
   const [quickOpen, setQuickOpen] = useState(false)
   const [foodFormOpen, setFoodFormOpen] = useState(false)
   const exercises = useMemo(() => new Map((exerciseList ?? []).map((e) => [e.id, e])), [exerciseList])
@@ -139,18 +140,24 @@ export function HomePage() {
         </Card>
         <div className="hp__meal-actions">
           {aiReady && (
-            <Button variant="primary" icon={<Camera size={18} aria-hidden />} onClick={() => setPhotoOpen(true)} block>
-              写真で記録
-            </Button>
+            <>
+              <Button variant="primary" icon={<Camera size={18} aria-hidden />} onClick={() => setPhotoOpen(true)} block>
+                写真
+              </Button>
+              <Button variant="primary" icon={<MessageSquareText size={18} aria-hidden />} onClick={() => setTalkOpen(true)} block>
+                AIに話す
+              </Button>
+            </>
           )}
-          <Button variant={aiReady ? 'secondary' : 'accent-soft'} icon={<Zap size={18} aria-hidden />} onClick={() => setQuickOpen(true)} block>
+          <Button variant={aiReady ? 'secondary' : 'accent-soft'} icon={<Zap size={18} aria-hidden />} onClick={() => setQuickOpen(true)} block className="hp__meal-quick">
             ざっくり記録
           </Button>
         </div>
         {foods.length > 0 && <QuickFoods foods={foods} date={today} limit={QUICK_LIMIT} onMore={() => navigate('/meals')} onAdd={() => setFoodFormOpen(true)} />}
       </Section>
 
-      <PhotoEstimateSheet open={photoOpen} onClose={() => setPhotoOpen(false)} date={today} />
+      <AiMealSheet open={photoOpen} onClose={() => setPhotoOpen(false)} date={today} mode="photo" />
+      <AiMealSheet open={talkOpen} onClose={() => setTalkOpen(false)} date={today} mode="text" />
       <QuickMealSheet open={quickOpen} onClose={() => setQuickOpen(false)} date={today} />
       <FoodFormSheet open={foodFormOpen} onClose={() => setFoodFormOpen(false)} />
     </div>

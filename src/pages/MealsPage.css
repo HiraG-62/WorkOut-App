@@ -44,7 +44,3 @@
   gap: var(--s-2);
 }
 
-.mp__actions--five > .btn:first-child {
-  grid-column: 1 / -1;
-}
-

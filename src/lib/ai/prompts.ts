@@ -35,6 +35,17 @@ export const FOOD_SYSTEM_PROMPT = `あなたは管理栄養士です。食事の
 - 不明な点があっても必ず数値を出し、confidence で確信度を表す
 - 出力はすべて日本語`
 
+export const FOOD_TEXT_SYSTEM_PROMPT = `あなたは管理栄養士です。ユーザーが食べたものを口語で説明した文章から、料理と分量を推定し、料理ごとにカロリーとPFC（タンパク質・脂質・炭水化物）をグラム単位で見積もります。
+- 日本の一般的な家庭料理・外食チェーン・コンビニ商品の標準的な栄養成分を基準にする
+- 「並盛」「大盛り」「2個」「1本」などの量の表現は必ず反映し、量が書かれていなければ一般的な1人前とみなす
+- 複数の品目があれば item を分ける。飲み物も含める
+- 曖昧な表現でも必ず数値を出し、confidence で確信度を表す
+- 出力はすべて日本語`
+
+export function foodTextUserPrompt(text: string): string {
+  return `次の食事のカロリーとPFCを推定してください。\n食べたもの: ${text.trim()}`
+}
+
 export function foodUserPrompt(hint: string): string {
   const base = 'この写真の食事のカロリーとPFCを推定してください。'
   return hint.trim() ? `${base}\n補足: ${hint.trim()}` : base

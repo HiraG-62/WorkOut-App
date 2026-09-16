@@ -2,6 +2,8 @@ import type { FoodEstimate, TargetSuggestion } from '../../types'
 import {
   FOOD_ESTIMATE_JSON_SCHEMA,
   FOOD_SYSTEM_PROMPT,
+  FOOD_TEXT_SYSTEM_PROMPT,
+  foodTextUserPrompt,
   FoodEstimateSchema,
   TARGET_SUGGESTION_JSON_SCHEMA,
   TARGET_SYSTEM_PROMPT,
@@ -17,6 +19,7 @@ import {
   type AiClient,
   type AiClientConfig,
   type FoodEstimateRequest,
+  type FoodTextRequest,
   type TargetSuggestionRequest,
 } from './types'
 
@@ -105,6 +108,13 @@ export function createOpenAiClient(config: AiClientConfig): AiClient {
         FOOD_ESTIMATE_JSON_SCHEMA,
         signal,
       )
+      const parsed = FoodEstimateSchema.safeParse(raw)
+      if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
+      return parsed.data
+    },
+
+    async estimateFoodFromText(req: FoodTextRequest, signal?: AbortSignal): Promise<FoodEstimate> {
+      const raw = await callJson(FOOD_TEXT_SYSTEM_PROMPT, [{ type: 'text', text: foodTextUserPrompt(req.text) }], 'food_estimate', FOOD_ESTIMATE_JSON_SCHEMA, signal)
       const parsed = FoodEstimateSchema.safeParse(raw)
       if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
       return parsed.data

@@ -6,6 +6,11 @@ export interface FoodEstimateRequest {
   hint: string
 }
 
+export interface FoodTextRequest {
+  /** 食べたものの説明。例: 牛丼の並盛とサラダ、缶コーヒー */
+  text: string
+}
+
 export interface TargetSuggestionRequest {
   profile: Profile
   weightKg: number
@@ -14,6 +19,7 @@ export interface TargetSuggestionRequest {
 
 export interface AiClient {
   estimateFood(req: FoodEstimateRequest, signal?: AbortSignal): Promise<FoodEstimate>
+  estimateFoodFromText(req: FoodTextRequest, signal?: AbortSignal): Promise<FoodEstimate>
   suggestTargets(req: TargetSuggestionRequest, signal?: AbortSignal): Promise<TargetSuggestion>
 }
 

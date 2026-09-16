@@ -12,3 +12,29 @@
 .ff__pfc .field__suffix {
   right: var(--s-2);
 }
+
+.ff__ai {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.ff__ai-note {
+  font-size: 12px;
+  color: var(--text-2);
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  border-left: 3px solid var(--accent);
+}
+
+.ff__fields--busy {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity var(--dur);
+}
+
+.ff__pfc-kcal {
+  font-size: 12px;
+  text-align: right;
+}

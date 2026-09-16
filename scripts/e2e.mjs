@@ -259,6 +259,18 @@ try {
   await clickLabel('閉じる')
   await sleep(300)
 
+  // フード登録フォームに AI 推定ボタンが出る（名前を入れると有効）
+  await clickText('フード登録')
+  await sleep(300)
+  const aiFillDisabled = await page.$eval('.ff__ai .btn', (b) => b.disabled)
+  assert(aiFillDisabled, 'フード登録: 名前が空だと AI 推定は無効')
+  await typeInto('.sheet input[placeholder*="鶏むね肉"]', 'セブンのサラダチキン')
+  const aiFillEnabled = await page.$eval('.ff__ai .btn', (b) => !b.disabled)
+  assert(aiFillEnabled, 'フード登録: 名前を入れると AI 推定が有効')
+  await shot('food-form-ai')
+  await clickLabel('閉じる')
+  await sleep(300)
+
   // 9. ホーム（データあり）
   await page.goto(BASE, { waitUntil: 'networkidle0' })
   await sleep(500)

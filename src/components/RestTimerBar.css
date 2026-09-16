@@ -13,6 +13,12 @@
   animation: rest-in var(--dur-slow) var(--ease-spring);
 }
 
+/* シート表示中は上端に退避（操作は可能なまま） */
+body.has-sheet .rest-bar {
+  bottom: auto;
+  top: calc(var(--safe-top) + var(--s-3));
+}
+
 .rest-bar__progress {
   position: absolute;
   inset: 0;

@@ -16,6 +16,8 @@ function pushSheet(token: symbol): void {
   openStack.push(token)
   document.getElementById(ROOT_ID)?.setAttribute('inert', '')
   document.body.style.overflow = 'hidden'
+  // トーストや休憩バーがシートの下部に重ならないよう、表示中は上端へ退避させる
+  document.body.classList.add('has-sheet')
 }
 
 function popSheet(token: symbol): void {
@@ -24,6 +26,7 @@ function popSheet(token: symbol): void {
   if (openStack.length === 0) {
     document.getElementById(ROOT_ID)?.removeAttribute('inert')
     document.body.style.overflow = ''
+    document.body.classList.remove('has-sheet')
   }
 }
 

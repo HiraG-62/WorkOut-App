@@ -27,7 +27,7 @@ export function QuickFoods({ foods, date, limit, onMore, onAdd }: QuickFoodsProp
       tapHaptic()
       const entry = await logFood(food, 1, date)
       toast.show(`${food.name} を記録`, 'success', { label: '取り消す', onClick: () => void unlogFood(entry) }, UNDO_MS)
-    })
+    }, food.id)
 
   return (
     <div className="qf">

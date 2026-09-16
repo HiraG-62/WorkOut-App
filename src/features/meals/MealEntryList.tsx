@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
-import { deleteMeal, updateMealQuantity } from '../../db/repo'
+import { unlogFood, updateMealQuantity } from '../../db/repo'
 import { formatTime, timeSlot, TIME_SLOT_LABELS } from '../../lib/date'
 import { fmt1 } from '../../lib/nutrition'
 import { Sheet } from '../../components/ui/Sheet'
@@ -84,7 +84,7 @@ export function MealEntryList({ entries }: MealEntryListProps) {
               variant="danger"
               icon={<Trash2 size={18} aria-hidden />}
               onClick={() => {
-                if (editing) void deleteMeal(editing.id)
+                if (editing) void unlogFood(editing)
                 setEditing(null)
               }}
               aria-label="この記録を削除"

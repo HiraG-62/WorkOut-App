@@ -14,6 +14,16 @@ body.has-timer .toast-stack {
   bottom: calc(var(--nav-h) + var(--safe-bottom) + var(--s-3) + 92px);
 }
 
+/* シート表示中は上端に出してフッターやリストを隠さない */
+body.has-sheet .toast-stack {
+  bottom: auto;
+  top: calc(var(--safe-top) + var(--s-3));
+}
+
+body.has-sheet.has-timer .toast-stack {
+  top: calc(var(--safe-top) + var(--s-3) + 92px);
+}
+
 .toast {
   pointer-events: auto;
   display: flex;

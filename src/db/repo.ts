@@ -124,11 +124,13 @@ export async function addSet(
 ): Promise<WorkoutSet> {
   // order の採番と追加を同一トランザクションにし、連打でも重複しないようにする
   return db.transaction('rw', db.sets, async () => {
-    const existing = await db.sets.where('[workoutId+exerciseId]').equals([input.workoutId, input.exerciseId]).count()
+    // 削除で欠番が出ても重複しないよう、最大値 + 1 で採番する
+    const existing = await db.sets.where('[workoutId+exerciseId]').equals([input.workoutId, input.exerciseId]).toArray()
+    const order = existing.reduce((m, s) => Math.max(m, s.order + 1), 0)
     const set: WorkoutSet = {
       id: newId(),
       ...input,
-      order: existing,
+      order,
       completedAt: Date.now(),
     }
     await db.sets.add(set)

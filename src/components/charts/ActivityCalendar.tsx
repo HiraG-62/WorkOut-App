@@ -1,4 +1,4 @@
-import { addDays, fromDateKey, todayKey } from '../../lib/date'
+import { addDays, fromDateKey } from '../../lib/date'
 import './ActivityCalendar.css'
 
 const DAYS_PER_WEEK = 7
@@ -10,11 +10,12 @@ interface ActivityCalendarProps {
   workoutDays: Set<string>
   /** 食事を記録した日付キーの集合 */
   mealDays: Set<string>
+  /** 今日の日付キー */
+  today: string
 }
 
 /** 直近12週間の記録ヒートマップ（GitHub風） */
-export function ActivityCalendar({ workoutDays, mealDays }: ActivityCalendarProps) {
-  const today = todayKey()
+export function ActivityCalendar({ workoutDays, mealDays, today }: ActivityCalendarProps) {
   const todayDow = fromDateKey(today).getDay()
   // 今週の日曜から遡って WEEKS 週分
   const start = addDays(today, -(todayDow + DAYS_PER_WEEK * (WEEKS - 1)))

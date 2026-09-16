@@ -77,11 +77,13 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
     if (draftKey.current === key) return
     draftKey.current = key
     const src = lastSets[done] ?? lastSets[lastSets.length - 1] ?? sets[sets.length - 1]
+    // 加重はセッション内で一定なことが多いので、今日すでに記録した値を最優先にする
+    const todayLast = sets[sets.length - 1]
+    const weightSrc = todayLast ?? src
     setDraft({
       reps: src?.reps ?? DEFAULT_REPS,
       seconds: Math.max(SECONDS_STEP, src?.seconds ?? DEFAULT_SECONDS),
-      // 前回があればその値（自重なら 0）、初めてなら既定の加重
-      weightKg: src ? (src.weightKg ?? 0) : exercise.useWeight ? DEFAULT_WEIGHT : 0,
+      weightKg: weightSrc ? (weightSrc.weightKg ?? 0) : exercise.useWeight ? DEFAULT_WEIGHT : 0,
     })
   }, [lastSets, done, sets, exercise.id, exercise.useWeight])
 
@@ -218,7 +220,7 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
 
       {!readOnly && draft && timing !== null && (
         <>
-          <button type="button" className="xb__timing" onClick={() => void stopTiming()} aria-label="計測を止めて記録する">
+          <button type="button" className="xb__timing" onClick={() => void stopTiming()} disabled={locked} aria-label="計測を止めて記録する">
             <span className="xb__timing-main">
               <span className="display xb__timing-val">{elapsed}</span>
               <span className="xb__timing-unit">秒</span>
@@ -250,7 +252,7 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
             </button>
           </div>
           {isTime && (
-            <button type="button" className="xb__bulk xb__bulk--play" onClick={startTiming}>
+            <button type="button" className="xb__bulk xb__bulk--play" onClick={startTiming} disabled={locked}>
               <Play size={16} fill="currentColor" aria-hidden />
               タイマーで計測して記録
             </button>

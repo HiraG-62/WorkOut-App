@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import { formatShort, lastNDays } from '../lib/date'
+import { useToday } from '../hooks/useToday'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, Section } from '../components/ui/Card'
 import { Segmented } from '../components/ui/Field'
@@ -24,6 +25,7 @@ function movingAverage(values: (number | null)[], window: number): (number | nul
 }
 
 export function LogPage() {
+  const today = useToday()
   const [range, setRange] = useState<RangeKey>(30)
   const [metric, setMetric] = useState<'max' | 'total'>('max')
   const weights = useLiveQuery(() => db.weights.orderBy('date').toArray(), [])
@@ -35,8 +37,8 @@ export function LogPage() {
 
   const weightPoints = useMemo<LinePoint[]>(() => {
     const map = new Map((weights ?? []).map((w) => [w.date, w.kg]))
-    return lastNDays(range).map((d) => ({ x: d, y: map.get(d) ?? null }))
-  }, [weights, range])
+    return lastNDays(range, today).map((d) => ({ x: d, y: map.get(d) ?? null }))
+  }, [weights, range, today])
   const weightAvg = useMemo(() => movingAverage(weightPoints.map((p) => p.y), MOVING_AVG_DAYS), [weightPoints])
 
   const workoutDays = useMemo(() => new Set((workouts ?? []).map((w) => w.date)), [workouts])
@@ -100,7 +102,7 @@ export function LogPage() {
 
       <Section title="継続">
         <Card>
-          <ActivityCalendar workoutDays={workoutDays} mealDays={mealDays} />
+          <ActivityCalendar workoutDays={workoutDays} mealDays={mealDays} today={today} />
         </Card>
       </Section>
 

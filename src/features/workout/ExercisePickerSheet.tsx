@@ -131,7 +131,13 @@ export function ExercisePickerSheet({ open, onClose, exercises, selectedIds, rec
           {list.length === 0 && <li className="ep__empty">該当する種目がありません</li>}
         </ul>
       </Sheet>
-      <ExerciseFormSheet open={formOpen} onClose={() => setFormOpen(false)} exercise={editing} allExercises={exercises} onSaved={(ex) => !editing && setPicked((p) => [...p, ex.id])} />
+      <ExerciseFormSheet open={formOpen} onClose={() => setFormOpen(false)} exercise={editing} allExercises={exercises} onSaved={(ex) => {
+          if (editing) return
+          setPicked((p) => [...p, ex.id])
+          // 作成した種目が「最近」フィルタで隠れないようにする
+          setChosen('all')
+          setQ('')
+        }} />
     </>
   )
 }

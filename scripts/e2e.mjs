@@ -143,6 +143,15 @@ try {
   await shot('session-start')
   assert(page.url().includes('#/workout/'), 'セッション画面に遷移')
 
+  // フォームガイド: 図をタップするとポイントと図のシートが開く
+  await clickLabel('腕立て伏せ のフォームを見る')
+  await sleep(400)
+  await shot('form-guide')
+  const tipCount = await page.$$eval('.eg__tips li', (els) => els.length)
+  assert(tipCount >= 3, `フォームのポイントが表示される (${tipCount})`)
+  await clickLabel('閉じる')
+  await sleep(300)
+
   // 4. セット完了 → 休憩タイマー
   await clickLabel('腕立て伏せ セット1を完了')
   await sleep(400)

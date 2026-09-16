@@ -10,6 +10,7 @@ import { MealsPage } from './pages/MealsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { WorkoutPage } from './pages/WorkoutPage'
 import { WorkoutSessionPage } from './pages/WorkoutSessionPage'
+import { FiguresDevPage } from './pages/FiguresDevPage'
 import { ScrollToTop } from './components/ScrollToTop'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useRestTimer } from './hooks/useRestTimer'
@@ -46,6 +47,7 @@ export function App() {
               <Route path="/meals" element={<MealsPage />} />
               <Route path="/log" element={<LogPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/dev/figures" element={<FiguresDevPage />} />
               <Route path="*" element={<HomePage />} />
             </Route>
           </Routes>

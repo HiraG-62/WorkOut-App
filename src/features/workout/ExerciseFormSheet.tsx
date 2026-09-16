@@ -8,6 +8,9 @@ import { Segmented, SelectField, TextField } from '../../components/ui/Field'
 import { Toggle } from '../../components/ui/Toggle'
 import { Button } from '../../components/ui/Button'
 import { BODY_PARTS, EXERCISE_TYPES, type BodyPart, type Exercise, type ExerciseType } from '../../types'
+import { FORM_FAMILIES, type FormFamily } from './formGuide'
+import { ExerciseFigure } from './ExerciseFigure'
+import { resolveFamily } from './ExerciseGuideSheet'
 
 interface ExerciseFormSheetProps {
   open: boolean
@@ -24,11 +27,12 @@ interface Draft {
   useWeight: boolean
   restSec: string
   progressionId: string
+  formFamily: string
 }
 
 const UNDO_MS = 6000
 
-const EMPTY: Draft = { name: '', type: 'reps', bodyPart: 'chest', useWeight: false, restSec: '', progressionId: '' }
+const EMPTY: Draft = { name: '', type: 'reps', bodyPart: 'chest', useWeight: false, restSec: '', progressionId: '', formFamily: '' }
 
 export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSaved }: ExerciseFormSheetProps) {
   const toast = useToast()
@@ -47,6 +51,7 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
             useWeight: exercise.useWeight,
             restSec: exercise.restSec ? String(exercise.restSec) : '',
             progressionId: exercise.progressionId ?? '',
+            formFamily: resolveFamily(exercise) ?? '',
           }
         : EMPTY,
     )
@@ -67,6 +72,7 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
       useWeight: d.useWeight,
       restSec: Number.isFinite(rest) && rest > 0 ? Math.round(rest) : undefined,
       progressionId: d.progressionId || undefined,
+      formFamily: (d.formFamily || undefined) as FormFamily | undefined,
     }
       if (exercise) {
         await updateExercise(exercise.id, payload)
@@ -126,6 +132,19 @@ export function ExerciseFormSheet({ open, onClose, exercise, allExercises, onSav
         />
         <Toggle checked={d.useWeight} onChange={(useWeight) => setD((s) => ({ ...s, useWeight }))} label="重量も記録する" description="ダンベルやリュック加重をする種目向け" />
         <TextField label="休憩時間（この種目だけ）" type="number" inputMode="numeric" value={d.restSec} onChange={(e) => setD((s) => ({ ...s, restSec: e.target.value }))} suffix="秒" placeholder="全体設定を使う" />
+        <div className="stack stack--sm">
+          <SelectField
+            label="動きのタイプ（図の表示用）"
+            value={d.formFamily}
+            onChange={(e) => setD((s) => ({ ...s, formFamily: e.target.value }))}
+            options={[{ value: '', label: '図なし' }, ...(Object.keys(FORM_FAMILIES) as FormFamily[]).map((k) => ({ value: k, label: FORM_FAMILIES[k] }))]}
+          />
+          {d.formFamily && (
+            <div className="row" style={{ justifyContent: 'center' }}>
+              <ExerciseFigure family={d.formFamily as FormFamily} width={140} />
+            </div>
+          )}
+        </div>
         <SelectField label="次のレベルの種目" hint="楽になってきたら、ワークアウト中にワンタップで切り替えられます" value={d.progressionId} onChange={(e) => setD((s) => ({ ...s, progressionId: e.target.value }))} options={progressionOptions} />
       </div>
     </Sheet>

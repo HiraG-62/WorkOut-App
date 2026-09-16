@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Check, Pencil, Plus, Search } from 'lucide-react'
+import { Check, Info, Pencil, Plus, Search } from 'lucide-react'
 import { Sheet } from '../../components/ui/Sheet'
 import { Button } from '../../components/ui/Button'
 import { ExerciseFormSheet } from './ExerciseFormSheet'
+import { ExerciseGuideSheet } from './ExerciseGuideSheet'
 import { BODY_PARTS, EXERCISE_TYPES, type BodyPart, type Exercise } from '../../types'
 import './ExercisePickerSheet.css'
 
@@ -28,6 +29,7 @@ export function ExercisePickerSheet({ open, onClose, exercises, selectedIds, rec
   const [picked, setPicked] = useState<string[]>([])
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Exercise | null>(null)
+  const [guide, setGuide] = useState<Exercise | null>(null)
 
   const list = useMemo(() => {
     const k = q.trim().toLowerCase()
@@ -114,6 +116,9 @@ export function ExercisePickerSheet({ open, onClose, exercises, selectedIds, rec
                     </span>
                   </span>
                 </button>
+                <button type="button" className="ep__edit" aria-label={`${e.name} のフォームを見る`} onClick={() => setGuide(e)}>
+                  <Info size={16} aria-hidden />
+                </button>
                 <button
                   type="button"
                   className="ep__edit"
@@ -131,6 +136,7 @@ export function ExercisePickerSheet({ open, onClose, exercises, selectedIds, rec
           {list.length === 0 && <li className="ep__empty">該当する種目がありません</li>}
         </ul>
       </Sheet>
+      <ExerciseGuideSheet exercise={guide} onClose={() => setGuide(null)} progressionName={guide?.progressionId ? exercises.find((x) => x.id === guide.progressionId)?.name : undefined} />
       <ExerciseFormSheet open={formOpen} onClose={() => setFormOpen(false)} exercise={editing} allExercises={exercises} onSaved={(ex) => {
           if (editing) return
           setPicked((p) => [...p, ex.id])

@@ -24,6 +24,28 @@
   gap: var(--s-2);
 }
 
+.xb__figure {
+  width: 64px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  margin: -2px 0 0 -4px;
+  padding: 2px 4px;
+}
+
+.xb__figure:active {
+  background: var(--surface-3);
+}
+
+.xb__figure-empty {
+  color: var(--text-3);
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
 .xb__title {
   flex: 1;
   min-width: 0;

@@ -1,3 +1,5 @@
+import type { FormFamily } from './features/workout/formGuide'
+
 export const BODY_PARTS = {
   chest: '胸',
   back: '背中',
@@ -27,6 +29,8 @@ export interface Exercise {
   progressionId?: string
   /** 一覧の並び順（初期種目は部位→難易度順）。未設定のユーザー作成種目は末尾 */
   order?: number
+  /** 図の表示に使う動きのタイプ（自作種目用。初期種目はガイド定義から引く） */
+  formFamily?: FormFamily
   isCustom: boolean
   archived: boolean
   createdAt: number

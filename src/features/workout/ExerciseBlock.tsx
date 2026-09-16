@@ -12,6 +12,8 @@ import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 import { useBusy } from '../../hooks/useBusy'
 import { formatSet } from './useWorkoutStats'
+import { ExerciseFigure } from './ExerciseFigure'
+import { ExerciseGuideSheet, resolveFamily } from './ExerciseGuideSheet'
 import type { Exercise, Workout, WorkoutSet } from '../../types'
 import './ExerciseBlock.css'
 
@@ -56,6 +58,7 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
   const lastWorkout = useLiveQuery(async () => (lastSets && lastSets[0] ? db.workouts.get(lastSets[0].workoutId) : undefined), [lastSets])
   const [draft, setDraft] = useState<Draft | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
   const [editing, setEditing] = useState<WorkoutSet | null>(null)
   const [editDraft, setEditDraft] = useState<Draft>({ reps: 0, seconds: 0, weightKg: 0 })
   const [timing, setTiming] = useState<number | null>(null)
@@ -178,11 +181,15 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
   }
 
   const remainingPlanned = planned.slice(done)
+  const family = resolveFamily(exercise)
   const doneClass = active ? 'xb__done' : 'xb__done xb__done--idle'
 
   return (
     <section className={`xb ${justDone ? 'xb--flash' : ''} ${active && !readOnly ? 'xb--active' : ''}`} aria-label={exercise.name}>
       <header className="xb__head">
+        <button type="button" className="xb__figure" onClick={() => setGuideOpen(true)} aria-label={`${exercise.name} のフォームを見る`}>
+          {family ? <ExerciseFigure family={family} width={64} animate={active && !readOnly} /> : <span className="xb__figure-empty">?</span>}
+        </button>
         <div className="xb__title">
           <h2 className="xb__name">{exercise.name}</h2>
           <p className="xb__sub">
@@ -259,6 +266,8 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
           )}
         </>
       )}
+
+      <ExerciseGuideSheet exercise={guideOpen ? exercise : null} onClose={() => setGuideOpen(false)} progressionName={progression?.name} />
 
       <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title={exercise.name}>
         <div className="stack stack--sm">

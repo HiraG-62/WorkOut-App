@@ -28,9 +28,10 @@ npm run build      # dist/ に PWA 込みで出力
 npm run lint
 npm run e2e        # 開発サーバー(5199)に対してスマホ相当の自動操作とスクリーンショット
 npm run pwa:check  # vite preview(4173) に対して Service Worker / マニフェストの登録確認
+npm run migration:check  # v1 の IndexedDB を用意して v2 マイグレーション（種目の order 付与）を確認
 ```
 
-`npm run e2e` は `puppeteer-core` でローカルの Chrome を使います。パスが違う場合は `CHROME_PATH` で指定してください。
+`npm run e2e` などのスクリプトは `puppeteer-core` でローカルの Chrome を使います。パスが違う場合は `CHROME_PATH` で指定してください。E2E は `npm run dev:e2e` で 5199 番ポートの開発サーバーを立ててから実行します。
 
 ## 技術
 

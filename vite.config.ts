@@ -1,6 +1,7 @@
+import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 /** アプリのバージョン（package.json の version が唯一の正。0.x はベータ） */
@@ -10,6 +11,30 @@ function appVersion(): string {
 }
 
 
+/**
+ * ビルド識別子（画面には出さない）。index.html の meta に埋めることで、
+ * コードが同じでもコミットごとに Service Worker の precache が変わり、更新として検知される。
+ * BUILD_ID 環境変数があればそれを優先（CI の更新フロー確認用）。
+ */
+function buildId(): string {
+  if (process.env.BUILD_ID) return process.env.BUILD_ID
+  const sha = process.env.GITHUB_SHA?.slice(0, 7)
+  if (sha) return sha
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    return String(Date.now())
+  }
+}
+
+function buildIdMeta(): Plugin {
+  return {
+    name: 'build-id-meta',
+    transformIndexHtml: (html) => html.replace('<meta name="theme-color"', `<meta name="build-id" content="${buildId()}" />
+    <meta name="theme-color"`),
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
@@ -18,6 +43,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    buildIdMeta(),
     VitePWA({
       // 新バージョンは「更新」バナーで反映する（開いている画面が黙って古いままにならないように）
       registerType: 'prompt',

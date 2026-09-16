@@ -18,8 +18,8 @@ await sleep(2000)
 const before = await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.active?.state ?? null)
 console.log('sw before:', before)
 
-// 2. 別バージョンをビルド（__BUILD_TIME__ が変わるので precache が変わる）
-execSync('npm run build', { stdio: 'ignore' })
+// 2. 別バージョンをビルド（BUILD_ID を変えると index.html の meta が変わり precache が変わる）
+execSync('npm run build', { stdio: 'ignore', env: { ...process.env, BUILD_ID: `upd-${Date.now()}` } })
 
 // 3. 更新チェック → バナー表示
 await page.evaluate(async () => {

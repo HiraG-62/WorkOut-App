@@ -31,15 +31,15 @@ const seed: SeedExercise[] = [
   { id: 'ex_glute_bridge_single', name: '片脚ヒップリフト', type: 'reps', bodyPart: 'legs' },
   { id: 'ex_calf_raise', name: 'カーフレイズ', type: 'reps', bodyPart: 'legs' },
   { id: 'ex_wall_sit', name: '空気椅子', type: 'time', bodyPart: 'legs' },
-  // 体幹
+  // 体幹（静止して姿勢を保つ系）
   { id: 'ex_plank', name: 'プランク', type: 'time', bodyPart: 'core', progressionId: 'ex_plank_side' },
   { id: 'ex_plank_side', name: 'サイドプランク', type: 'time', bodyPart: 'core' },
-  { id: 'ex_crunch', name: 'クランチ', type: 'reps', bodyPart: 'core' },
-  { id: 'ex_leg_raise', name: 'レッグレイズ', type: 'reps', bodyPart: 'core', progressionId: 'ex_hanging_leg_raise' },
-  { id: 'ex_hanging_leg_raise', name: 'ハンギングレッグレイズ', type: 'reps', bodyPart: 'core' },
-  { id: 'ex_bicycle_crunch', name: 'バイシクルクランチ', type: 'reps', bodyPart: 'core' },
+  { id: 'ex_crunch', name: 'クランチ', type: 'reps', bodyPart: 'abs' },
+  { id: 'ex_leg_raise', name: 'レッグレイズ', type: 'reps', bodyPart: 'abs', progressionId: 'ex_hanging_leg_raise' },
+  { id: 'ex_hanging_leg_raise', name: 'ハンギングレッグレイズ', type: 'reps', bodyPart: 'abs' },
+  { id: 'ex_bicycle_crunch', name: 'バイシクルクランチ', type: 'reps', bodyPart: 'abs' },
   { id: 'ex_mountain_climber', name: 'マウンテンクライマー', type: 'reps', bodyPart: 'core' },
-  { id: 'ex_hollow_hold', name: 'ホローホールド', type: 'time', bodyPart: 'core' },
+  { id: 'ex_hollow_hold', name: 'ホローホールド', type: 'time', bodyPart: 'abs' },
   // 肩
   { id: 'ex_pike_pushup', name: 'パイクプッシュアップ', type: 'reps', bodyPart: 'shoulders', progressionId: 'ex_hspu_wall' },
   { id: 'ex_hspu_wall', name: '壁倒立腕立て', type: 'reps', bodyPart: 'shoulders' },

@@ -80,6 +80,19 @@ class WorkoutDB extends Dexie {
       })
     // v4: セットメニュー
     this.version(4).stores({ routines: 'id' })
+    // v5: 部位に「腹筋」を追加し、初期種目の腹筋系を体幹から移す
+    this.version(5)
+      .stores({})
+      .upgrade(async (tx) => {
+        const partById = new Map(SEED_EXERCISES.map((e) => [e.id, e.bodyPart]))
+        await tx
+          .table('exercises')
+          .toCollection()
+          .modify((ex: Exercise) => {
+            const part = partById.get(ex.id)
+            if (!ex.isCustom && part !== undefined) ex.bodyPart = part
+          })
+      })
     this.on('populate', () => {
       void this.exercises.bulkAdd(SEED_EXERCISES)
       void this.settings.add(DEFAULT_SETTINGS)

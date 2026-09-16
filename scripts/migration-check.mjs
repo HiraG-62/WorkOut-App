@@ -34,6 +34,8 @@ await page.evaluate(
         const tx = dbx.transaction('exercises', 'readwrite')
         tx.objectStore('exercises').put({ id: 'ex_squat', name: 'スクワット', type: 'reps', bodyPart: 'legs', useWeight: false, isCustom: false, archived: false, createdAt: 0 })
         tx.objectStore('exercises').put({ id: 'custom1', name: '自作種目', type: 'reps', bodyPart: 'full', useWeight: false, isCustom: true, archived: false, createdAt: 1 })
+        // v5 で初期種目のクランチは体幹→腹筋に移る
+        tx.objectStore('exercises').put({ id: 'ex_crunch', name: 'クランチ', type: 'reps', bodyPart: 'core', useWeight: false, isCustom: false, archived: false, createdAt: 0 })
         tx.oncomplete = () => {
           dbx.close()
           resolve()
@@ -54,7 +56,7 @@ const result = await page.evaluate(
         const dbx = req.result
         const tx = dbx.transaction('exercises', 'readonly')
         const getAll = tx.objectStore('exercises').getAll()
-        getAll.onsuccess = () => resolve({ version: dbx.version, rows: getAll.result.map((r) => ({ id: r.id, order: r.order })) })
+        getAll.onsuccess = () => resolve({ version: dbx.version, rows: getAll.result.map((r) => ({ id: r.id, order: r.order, bodyPart: r.bodyPart })) })
         getAll.onerror = () => reject(getAll.error)
       }
       req.onerror = () => reject(req.error)
@@ -62,14 +64,16 @@ const result = await page.evaluate(
 )
 const squat = result.rows.find((r) => r.id === 'ex_squat')
 const custom = result.rows.find((r) => r.id === 'custom1')
+const crunch = result.rows.find((r) => r.id === 'ex_crunch')
+console.log('ex_crunch bodyPart:', crunch?.bodyPart)
 console.log('db version:', result.version)
 console.log('ex_squat order:', squat?.order, '| custom1 order:', custom?.order)
 console.log('errors:', errors.length ? errors : 'none')
 // Dexie は内部バージョンを 10 倍で保持する
 const DEXIE_VERSION_SCALE = 10
 // 現在のスキーマバージョン（src/db/db.ts の this.version(n) の最大値）
-const SCHEMA_VERSION = 4
-const ok = result.version === SCHEMA_VERSION * DEXIE_VERSION_SCALE && typeof squat?.order === 'number' && custom?.order === undefined && errors.length === 0
+const SCHEMA_VERSION = 5
+const ok = result.version === SCHEMA_VERSION * DEXIE_VERSION_SCALE && typeof squat?.order === 'number' && custom?.order === undefined && crunch?.bodyPart === 'abs' && errors.length === 0
 console.log(ok ? 'MIGRATION OK' : 'MIGRATION FAILED')
 process.exitCode = ok ? 0 : 1
 await browser.close()

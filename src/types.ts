@@ -5,6 +5,7 @@ export const BODY_PARTS = {
   back: '背中',
   legs: '脚',
   core: '体幹',
+  abs: '腹筋',
   shoulders: '肩',
   arms: '腕',
   full: '全身',

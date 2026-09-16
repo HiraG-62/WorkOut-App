@@ -155,7 +155,7 @@ const BODY_PART_LEGEND = BODY_PART_KEYS.map((k) => `${k}=${BODY_PARTS[k]}`).join
 
 const ExerciseFieldsSchema = {
   type: z.enum(['reps', 'time']).describe('reps: 回数で記録する種目 / time: 秒数で記録する種目（プランクなど静止系）'),
-  bodyPart: z.enum(BODY_PART_KEYS).describe(`主に使う部位。${BODY_PART_LEGEND}`),
+  bodyPart: z.enum(BODY_PART_KEYS).describe(`主に使う部位。${BODY_PART_LEGEND}。core は姿勢を保つ静止系（プランク等）、abs は腹筋を曲げ伸ばしする種目（クランチ・レッグレイズ等）`),
   useWeight: z.boolean().describe('ダンベルやリュックなどで加重するのが一般的な種目なら true'),
   formFamily: z.enum(FAMILY_KEYS).describe(`最も近い動きのタイプ。${FAMILY_LEGEND}。どれにも当てはまらなければ none`),
   met: z.number().min(1).max(15).describe('運動強度 MET（自重運動の目安: 軽い 2.5〜3、ふつう 3.5〜5、きつい 6〜8）'),

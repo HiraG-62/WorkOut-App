@@ -256,7 +256,7 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
 
       <p className="faint st__version">
         v{__APP_VERSION__}
-        {__APP_VERSION__.startsWith('0.') ? ' β' : ''} · {__APP_COMMIT__} · ビルド {new Date(__BUILD_TIME__).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+        {__APP_VERSION__.startsWith('0.') ? ' β' : ''}
       </p>
 
       <Sheet

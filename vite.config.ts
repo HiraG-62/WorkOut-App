@@ -1,4 +1,3 @@
-import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
@@ -10,24 +9,12 @@ function appVersion(): string {
   return pkg.version
 }
 
-/** 設定画面に出すビルド情報。CI では GITHUB_SHA、ローカルでは git から取る */
-function commitSha(): string {
-  const sha = process.env.GITHUB_SHA?.slice(0, 7)
-  if (sha) return sha
-  try {
-    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
-  } catch {
-    return 'dev'
-  }
-}
 
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
   define: {
     __APP_VERSION__: JSON.stringify(appVersion()),
-    __APP_COMMIT__: JSON.stringify(commitSha()),
-    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },
   plugins: [
     react(),

@@ -1,14 +1,32 @@
+import { execSync } from 'node:child_process'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+/** 設定画面に出すビルド情報。CI では GITHUB_SHA、ローカルでは git から取る */
+function appVersion(): string {
+  const sha = process.env.GITHUB_SHA?.slice(0, 7)
+  if (sha) return sha
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    return 'dev'
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion()),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 新バージョンは「更新」バナーで反映する（開いている画面が黙って古いままにならないように）
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
         name: 'WorkOut',
@@ -28,6 +46,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // 「更新」後に新しい SW が既存ページの制御を取り、再読み込みが走るようにする
+        clientsClaim: true,
+        skipWaiting: false,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: 'index.html',
         runtimeCaching: [

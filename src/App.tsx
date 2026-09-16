@@ -13,6 +13,7 @@ import { WorkoutSessionPage } from './pages/WorkoutSessionPage'
 import { FiguresDevPage } from './pages/FiguresDevPage'
 import { ScrollToTop } from './components/ScrollToTop'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { UpdateBanner } from './components/UpdateBanner'
 import { useRestTimer } from './hooks/useRestTimer'
 
 function Shell() {
@@ -29,6 +30,7 @@ function Shell() {
       </ErrorBoundary>
       <RestTimerBar />
       <BottomNav />
+      <UpdateBanner />
     </div>
   )
 }

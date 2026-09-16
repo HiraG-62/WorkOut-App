@@ -254,6 +254,10 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
         </Card>
       </Section>
 
+      <p className="faint st__version">
+        バージョン {__APP_VERSION__} · ビルド {new Date(__BUILD_TIME__).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+      </p>
+
       <Sheet
         open={suggestion !== null}
         onClose={() => setSuggestion(null)}

@@ -55,6 +55,7 @@ jobs:
           npx vite preview --port 4173 --strictPort > /tmp/preview.log 2>&1 &
           npx wait-on http://localhost:4173 --timeout 60000
           npm run pwa:check
+          npm run update:check
 
       - name: スクリーンショットを保存
         if: always()

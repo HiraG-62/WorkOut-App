@@ -28,6 +28,7 @@ npm run build      # dist/ に PWA 込みで出力
 npm run lint
 npm run e2e        # 開発サーバー(5199)に対してスマホ相当の自動操作とスクリーンショット
 npm run pwa:check  # vite preview(4173) に対して Service Worker / マニフェストの登録確認
+npm run update:check  # 新バージョン検知 → 更新バナー → 再読み込みの流れを確認（preview 起動中に実行）
 npm run migration:check  # v1 の IndexedDB を用意して v2 マイグレーション（種目の order 付与）を確認
 ```
 
@@ -53,3 +54,4 @@ AI 連携はブラウザから各社 API を直接呼びます（Claude は `@an
 1. iPhone は Safari、Android は Chrome で上の URL を開く
 2. 「ホーム画面に追加」でアプリとして起動できる（全画面・オフライン対応）
 3. AI 機能を使う場合は 設定 → AI で API キーを入力（端末内にのみ保存）
+4. 新しいバージョンが公開されると、アプリを開いた/復帰したときに上部に「新しいバージョンがあります」バナーが出る。「更新」で反映。設定画面の最下部で現在のバージョン（コミット SHA）を確認できる

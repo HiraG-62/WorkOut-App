@@ -1,5 +1,5 @@
 import { db, DEFAULT_SETTINGS } from '../db/db'
-import type { Exercise, Food, MealEntry, MealSet, Settings, WeeklyReview, WeightEntry, Workout, WorkoutSet } from '../types'
+import type { Exercise, Food, MealEntry, MealSet, Routine, Settings, WeeklyReview, WeightEntry, Workout, WorkoutSet } from '../types'
 
 const BACKUP_VERSION = 1
 
@@ -15,6 +15,7 @@ interface Backup {
   weights: WeightEntry[]
   /** v1 のバックアップには無い */
   weeklyReviews?: WeeklyReview[]
+  routines?: Routine[]
   settings: Settings | undefined
 }
 
@@ -26,7 +27,7 @@ function isIos(): boolean {
 }
 
 export async function exportBackup(): Promise<string> {
-  const [exercises, workouts, sets, foods, meals, mealSets, weights, weeklyReviews, settings] = await Promise.all([
+  const [exercises, workouts, sets, foods, meals, mealSets, weights, weeklyReviews, routines, settings] = await Promise.all([
     db.exercises.toArray(),
     db.workouts.toArray(),
     db.sets.toArray(),
@@ -35,6 +36,7 @@ export async function exportBackup(): Promise<string> {
     db.mealSets.toArray(),
     db.weights.toArray(),
     db.weeklyReviews.toArray(),
+    db.routines.toArray(),
     db.settings.get('app'),
   ])
   // APIキーはバックアップに含めない
@@ -50,6 +52,7 @@ export async function exportBackup(): Promise<string> {
     mealSets,
     weights,
     weeklyReviews,
+    routines,
     settings: safeSettings,
   }
   return JSON.stringify(backup)
@@ -98,6 +101,9 @@ function parseBackup(json: string): Backup {
   if (b.weeklyReviews !== undefined && !isRecordArray(b.weeklyReviews)) {
     throw new Error('データが壊れています: weeklyReviews')
   }
+  if (b.routines !== undefined && !isRecordArray(b.routines)) {
+    throw new Error('データが壊れています: routines')
+  }
   // 各テーブルの中身は id を持つオブジェクト配列であることまで確認した上で、型は書き出し時のものを信頼する
   return b as unknown as Backup
 }
@@ -108,7 +114,7 @@ export async function importBackup(json: string): Promise<{ settingsRestored: bo
   // 体重は日付ユニーク。重複していたら後のものを残す
   b.weights = [...new Map(b.weights.map((w) => [w.date, w])).values()]
   const current = await db.settings.get('app')
-  await db.transaction('rw', [db.exercises, db.workouts, db.sets, db.foods, db.meals, db.mealSets, db.weights, db.weeklyReviews, db.settings], async () => {
+  await db.transaction('rw', [db.exercises, db.workouts, db.sets, db.foods, db.meals, db.mealSets, db.weights, db.weeklyReviews, db.routines, db.settings], async () => {
     await Promise.all([
       db.exercises.clear(),
       db.workouts.clear(),
@@ -118,6 +124,7 @@ export async function importBackup(json: string): Promise<{ settingsRestored: bo
       db.mealSets.clear(),
       db.weights.clear(),
       db.weeklyReviews.clear(),
+      db.routines.clear(),
     ])
     await Promise.all([
       db.exercises.bulkAdd(b.exercises),
@@ -128,6 +135,7 @@ export async function importBackup(json: string): Promise<{ settingsRestored: bo
       db.mealSets.bulkAdd(b.mealSets),
       db.weights.bulkAdd(b.weights),
       db.weeklyReviews.bulkAdd(b.weeklyReviews ?? []),
+      db.routines.bulkAdd(b.routines ?? []),
     ])
     if (b.settings) {
       // 古い/欠けたフィールドは既定値で補う

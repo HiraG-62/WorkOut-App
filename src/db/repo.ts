@@ -1,7 +1,7 @@
 import { db, DEFAULT_SETTINGS } from './db'
 import { newId } from '../lib/id'
 import { fromDateKey, timeSlot, todayKey } from '../lib/date'
-import type { Exercise, Food, MealEntry, MealSet, Settings, WeeklyReview, WeightEntry, Workout, WorkoutSet } from '../types'
+import type { Exercise, ExerciseType, Food, MealEntry, MealSet, Routine, RoutineItem, Settings, WeeklyReview, WeightEntry, Workout, WorkoutSet } from '../types'
 
 // ---------- Settings ----------
 
@@ -18,7 +18,7 @@ export async function updateSettings(patch: Partial<Omit<Settings, 'id'>>): Prom
 // ---------- Exercises ----------
 
 export async function addExercise(
-  input: Pick<Exercise, 'name' | 'type' | 'bodyPart' | 'useWeight'> & Partial<Pick<Exercise, 'restSec' | 'progressionId' | 'formFamily' | 'met'>>,
+  input: Pick<Exercise, 'name' | 'type' | 'bodyPart' | 'useWeight'> & Partial<Pick<Exercise, 'restSec' | 'progressionId' | 'formFamily' | 'met' | 'guide'>>,
 ): Promise<Exercise> {
   const ex: Exercise = {
     id: newId(),
@@ -45,15 +45,38 @@ export async function unarchiveExercise(id: string): Promise<void> {
 
 // ---------- Workouts ----------
 
-export async function createWorkout(exerciseIds: string[]): Promise<Workout> {
+export async function createWorkout(exerciseIds: string[], plan?: RoutineItem[], routineId?: string): Promise<Workout> {
   const w: Workout = {
     id: newId(),
     date: todayKey(),
     startedAt: Date.now(),
     exerciseIds,
+    ...(plan ? { plan } : {}),
+    ...(routineId ? { routineId } : {}),
   }
   await db.workouts.add(w)
   return w
+}
+
+
+/** ゴースト行（プリセット）の元になるセット。メニューの計画があればそれを、無ければ前回のセットを返す */
+export type PlannedSet = Pick<WorkoutSet, 'reps' | 'seconds' | 'weightKg'>
+
+/** 計画をセットに展開する。種目の単位を後から変えて計画に値が無い場合は既定値で補う */
+export function planToSets(item: RoutineItem, type: ExerciseType, lastSets: WorkoutSet[]): PlannedSet[] {
+  // 加重は計画に持たないので、前回の値を引き継ぐ
+  const weightKg = lastSets[lastSets.length - 1]?.weightKg
+  return Array.from({ length: item.sets }, () =>
+    type === 'time' ? { seconds: item.seconds ?? DEFAULT_PLAN_SECONDS, weightKg } : { reps: item.reps ?? DEFAULT_PLAN_REPS, weightKg },
+  )
+}
+
+export async function getPlannedSets(workout: Pick<Workout, 'id' | 'plan'>, exerciseId: string): Promise<PlannedSet[]> {
+  const last = await getLastSetsForExercise(exerciseId, workout.id)
+  const item = workout.plan?.find((p) => p.exerciseId === exerciseId)
+  if (!item) return last
+  const ex = await db.exercises.get(exerciseId)
+  return planToSets(item, ex?.type ?? 'reps', last)
 }
 
 export async function finishWorkout(id: string): Promise<void> {
@@ -344,3 +367,62 @@ export async function putWeeklyReview(review: WeeklyReview): Promise<void> {
 export async function deleteWeeklyReview(id: string): Promise<void> {
   await db.weeklyReviews.delete(id)
 }
+
+// ---------- Routines（セットメニュー） ----------
+
+export async function addRoutine(input: Pick<Routine, 'name' | 'items' | 'source'> & Partial<Pick<Routine, 'sourceUrl' | 'note'>>): Promise<Routine> {
+  const r: Routine = { id: newId(), useCount: 0, lastUsedAt: 0, createdAt: Date.now(), ...input }
+  await db.routines.add(r)
+  return r
+}
+
+export async function updateRoutine(id: string, patch: Partial<Omit<Routine, 'id'>>): Promise<void> {
+  await db.routines.update(id, patch)
+}
+
+export async function deleteRoutine(id: string): Promise<Routine | undefined> {
+  const r = await db.routines.get(id)
+  await db.routines.delete(id)
+  return r
+}
+
+export async function restoreRoutine(r: Routine): Promise<void> {
+  await db.routines.put(r)
+}
+
+/** メニューからワークアウトを開始する。削除済みの種目は除き、残りが無ければ何も作らず null */
+export async function startRoutine(routine: Routine): Promise<Workout | null> {
+  const alive = new Set((await db.exercises.filter((e) => !e.archived).toArray()).map((e) => e.id))
+  const items = routine.items.filter((i) => alive.has(i.exerciseId))
+  if (items.length === 0) return null
+  const w = await createWorkout(items.map((i) => i.exerciseId), items, routine.id)
+  await db.routines.update(routine.id, { useCount: routine.useCount + 1, lastUsedAt: Date.now() })
+  return w
+}
+
+/** 元メニューの順序と種目を保ったまま、今日記録した種目だけ実績で上書きし、新しく足した種目は末尾に付ける */
+export function mergeRoutineItems(base: RoutineItem[], fromSets: RoutineItem[]): RoutineItem[] {
+  const byId = new Map(fromSets.map((i) => [i.exerciseId, i]))
+  const merged = base.map((b) => byId.get(b.exerciseId) ?? b)
+  const known = new Set(base.map((b) => b.exerciseId))
+  return [...merged, ...fromSets.filter((i) => !known.has(i.exerciseId))]
+}
+
+/** 記録済みのワークアウトからメニューの項目を作る（セット数と最後のセットの値） */
+export function routineItemsFromSets(exerciseIds: string[], sets: WorkoutSet[], exercises: Map<string, Exercise>): RoutineItem[] {
+  return exerciseIds.flatMap((exerciseId) => {
+    const ex = exercises.get(exerciseId)
+    const own = sets.filter((s) => s.exerciseId === exerciseId)
+    if (!ex || own.length === 0) return []
+    const last = own[own.length - 1]
+    return [
+      ex.type === 'time'
+        ? { exerciseId, sets: own.length, seconds: last.seconds ?? DEFAULT_PLAN_SECONDS }
+        : { exerciseId, sets: own.length, reps: last.reps ?? DEFAULT_PLAN_REPS },
+    ]
+  })
+}
+
+export const DEFAULT_PLAN_REPS = 10
+export const DEFAULT_PLAN_SECONDS = 30
+export const DEFAULT_PLAN_SETS = 3

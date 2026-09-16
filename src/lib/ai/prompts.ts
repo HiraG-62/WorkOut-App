@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { ACTIVITY_LEVELS, GOALS, SEX, type Profile, type Targets } from '../../types'
+import { ACTIVITY_LEVELS, BODY_PARTS, GOALS, SEX, type Profile, type Targets } from '../../types'
+import { FORM_FAMILIES, type FormFamily } from '../../features/workout/formGuide'
 import type { WeekStats } from '../weekly'
 
 export const FoodEstimateSchema = z.object({
@@ -145,4 +146,73 @@ export function weeklyUserPrompt(profile: Profile, weightKg: number, targets: Ta
     ...(previous ? statsLines('前週', previous) : ['【前週】記録なし']),
   ]
   return `以下の1週間の記録を振り返り、来週の一言アドバイスをください。\n${lines.join('\n')}`
+}
+
+const BODY_PART_KEYS = Object.keys(BODY_PARTS) as [keyof typeof BODY_PARTS, ...(keyof typeof BODY_PARTS)[]]
+const FAMILY_KEYS = ['none', ...(Object.keys(FORM_FAMILIES) as FormFamily[])] as ['none', ...FormFamily[]]
+const FAMILY_LEGEND = (Object.keys(FORM_FAMILIES) as FormFamily[]).map((k) => `${k}=${FORM_FAMILIES[k]}`).join(', ')
+const BODY_PART_LEGEND = BODY_PART_KEYS.map((k) => `${k}=${BODY_PARTS[k]}`).join(', ')
+
+const ExerciseFieldsSchema = {
+  type: z.enum(['reps', 'time']).describe('reps: 回数で記録する種目 / time: 秒数で記録する種目（プランクなど静止系）'),
+  bodyPart: z.enum(BODY_PART_KEYS).describe(`主に使う部位。${BODY_PART_LEGEND}`),
+  useWeight: z.boolean().describe('ダンベルやリュックなどで加重するのが一般的な種目なら true'),
+  formFamily: z.enum(FAMILY_KEYS).describe(`最も近い動きのタイプ。${FAMILY_LEGEND}。どれにも当てはまらなければ none`),
+  met: z.number().min(1).max(15).describe('運動強度 MET（自重運動の目安: 軽い 2.5〜3、ふつう 3.5〜5、きつい 6〜8）'),
+}
+
+export const ExerciseClassificationSchema = z.object({
+  ...ExerciseFieldsSchema,
+  restSec: z.number().min(0).max(600).describe('推奨する休憩秒数（30〜120 が一般的）'),
+  tips: z.array(z.string()).describe('フォームのポイントを3つ、各20〜40文字（日本語）'),
+  avoid: z.string().describe('よくある間違いを1文（日本語）'),
+  description: z.string().describe('どんな種目かを1文で（日本語）'),
+})
+
+export const EXERCISE_CLASSIFICATION_JSON_SCHEMA = z.toJSONSchema(ExerciseClassificationSchema)
+
+export const EXERCISE_SYSTEM_PROMPT = `あなたは自宅での自重トレーニングに詳しいパーソナルトレーナーです。種目名（と補足）から、その種目の性質を判定します。
+- 記録の単位は、回数を数える動きなら reps、静止して耐える種目（プランク・空気椅子・ぶら下がり等）なら time
+- formFamily は用意された動きのタイプから最も近いものを選ぶ。派生種目（ワイド腕立て、デクライン腕立て等）は元の動き（pushup）に寄せる
+- 種目名が英語や略称でも一般的な名称として解釈する（例: HSPU=壁倒立腕立て、BW スクワット=スクワット）
+- tips は初心者が読んで実行できる具体的な言葉で。出力はすべて日本語`
+
+export function exerciseUserPrompt(name: string, hint: string): string {
+  const base = `次の種目を判定してください。\n種目名: ${name.trim()}`
+  return hint.trim() ? `${base}\n補足: ${hint.trim()}` : base
+}
+
+export const ParsedWorkoutSchema = z.object({
+  name: z.string().describe('メニュー名（動画タイトルを短くしたもの。20文字以内、日本語）'),
+  items: z.array(
+    z.object({
+      name: z.string().describe('種目名（日本語。一般的な呼び方に正規化する）'),
+      sets: z.number().int().min(1).max(20).describe('セット数。分からなければ 3'),
+      reps: z.number().int().min(0).max(500).describe('1セットの回数。時間種目なら 0'),
+      seconds: z.number().int().min(0).max(3600).describe('1セットの秒数。回数種目なら 0'),
+      ...ExerciseFieldsSchema,
+    }),
+  ),
+  confidence: z.enum(['low', 'medium', 'high']),
+  note: z.string().describe('読み取りの根拠や補足を1〜2文で（日本語）。例: 説明欄のチャプターから読み取った'),
+})
+
+export const PARSED_WORKOUT_JSON_SCHEMA = z.toJSONSchema(ParsedWorkoutSchema)
+
+export const VIDEO_SYSTEM_PROMPT = `あなたは筋トレ動画の内容をトレーニングメニューに書き起こすアシスタントです。動画（見られる場合）と、タイトル・説明欄・チャプターのテキストから、実施する種目を順番どおりに抜き出します。
+- 各種目についてセット数・回数（または秒数）を読み取る。「30秒 × 3セット」「10回 × 3」などの表記は必ず反映する。書かれていなければ、動画の流れから妥当な値を推定し note にその旨を書く
+- サーキット形式（複数種目を順に行い、それを N 周）は、各種目のセット数 = 周回数として展開する
+- ウォームアップ・クールダウン・ストレッチは除く（純粋なストレッチ動画なら含めてよい）
+- 種目名は日本語の一般的な名称に正規化する（Push-up → 腕立て伏せ）
+- 各種目の記録単位・部位・動きのタイプ・MET も判定する
+- 出力はすべて日本語`
+
+export function videoUserPrompt(url: string, title: string, description: string, hasVideo: boolean): string {
+  const lines = [
+    hasVideo ? 'この動画のトレーニングメニューを書き起こしてください。' : '次の動画の情報からトレーニングメニューを書き起こしてください（動画本体は見られません）。',
+    `URL: ${url}`,
+  ]
+  if (title.trim()) lines.push(`タイトル: ${title.trim()}`)
+  if (description.trim()) lines.push(`説明欄・チャプター:\n${description.trim()}`)
+  return lines.join('\n')
 }

@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { FoodEstimate, NutritionLabel, TargetSuggestion, WeeklyReviewResult } from '../../types'
+import type { ExerciseClassification, FoodEstimate, NutritionLabel, ParsedWorkoutResult, TargetSuggestion, WeeklyReviewResult } from '../../types'
 import {
   FOOD_ESTIMATE_JSON_SCHEMA,
   FOOD_SYSTEM_PROMPT,
@@ -15,6 +15,14 @@ import {
   TargetSuggestionSchema,
   foodUserPrompt,
   targetUserPrompt,
+  EXERCISE_CLASSIFICATION_JSON_SCHEMA,
+  EXERCISE_SYSTEM_PROMPT,
+  ExerciseClassificationSchema,
+  exerciseUserPrompt,
+  PARSED_WORKOUT_JSON_SCHEMA,
+  ParsedWorkoutSchema,
+  VIDEO_SYSTEM_PROMPT,
+  videoUserPrompt,
   WEEKLY_REVIEW_JSON_SCHEMA,
   WEEKLY_SYSTEM_PROMPT,
   WeeklyReviewSchema,
@@ -29,6 +37,8 @@ import {
   type FoodTextRequest,
   type TargetSuggestionRequest,
   type WeeklyReviewRequest,
+  type ExerciseClassifyRequest,
+  type VideoWorkoutRequest,
 } from './types'
 
 const MAX_TOKENS = 4096
@@ -150,6 +160,19 @@ export function createClaudeClient(config: AiClientConfig): AiClient {
       const parsed = WeeklyReviewSchema.safeParse(raw)
       if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
       return parsed.data
+    },
+    async classifyExercise(req: ExerciseClassifyRequest, signal?: AbortSignal): Promise<ExerciseClassification> {
+      const raw = await callJson(EXERCISE_SYSTEM_PROMPT, [{ type: 'text', text: exerciseUserPrompt(req.name, req.hint) }], EXERCISE_CLASSIFICATION_JSON_SCHEMA, signal)
+      const parsed = ExerciseClassificationSchema.safeParse(raw)
+      if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
+      return parsed.data
+    },
+
+    async parseWorkoutVideo(req: VideoWorkoutRequest, signal?: AbortSignal): Promise<ParsedWorkoutResult> {
+      const raw = await callJson(VIDEO_SYSTEM_PROMPT, [{ type: 'text', text: videoUserPrompt(req.url, req.title, req.description, false) }], PARSED_WORKOUT_JSON_SCHEMA, signal)
+      const parsed = ParsedWorkoutSchema.safeParse(raw)
+      if (!parsed.success) throw new AiError('parse', 'AIの応答形式が想定と異なりました')
+      return { ...parsed.data, watched: false }
     },
   }
 }

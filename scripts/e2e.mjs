@@ -178,11 +178,58 @@ try {
   const burnText = await textOf('.ws__burn')
   assert(/kcal/.test(burnText), `セッションに推定消費カロリーが出る (${burnText})`)
 
+  // 4c. セッション画面から「メニューとして保存」（進行中の毎秒更新で入力が消えないこと）
+  await clickText('メニューとして保存')
+  await sleep(400)
+  await page.click('.sheet input[placeholder*="朝の全身"]')
+  await page.keyboard.down('Control')
+  await page.keyboard.press('KeyA')
+  await page.keyboard.up('Control')
+  await page.keyboard.press('Backspace')
+  await page.type('.sheet input[placeholder*="朝の全身"]', '今日のやつ')
+  await sleep(1500)
+  const keptName = await page.$eval('.sheet input[placeholder*="朝の全身"]', (i) => i.value)
+  assert(keptName === '今日のやつ', `保存シートの入力が保持される (${keptName})`)
+  const fromSession = await page.$$eval('.re__item', (els) => els.length)
+  assert(fromSession === 2, `記録した2種目がメニューに入る (${fromSession})`)
+  // 背面の「メニューとして保存」と区別するため完全一致で押す
+  await clickText('保存', { exact: true })
+  await sleep(500)
+
   // 5. 終了
   await clickText('終了')
   await sleep(600)
   await shot('workout-done')
   assert((await page.$('.wp__today')) !== null, '今日のワークアウトカードが出る')
+
+  // 5b. セットメニュー: 作成 → 開始 → 計画どおりのプリセット → 0セットで終了（履歴には残らない）
+  await clickText('メニューを作る')
+  await sleep(400)
+  await typeInto('.sheet input[placeholder*="朝の全身"]', 'テストメニュー')
+  await clickText('種目を追加')
+  await sleep(400)
+  await pickExercise('腕立て伏せ')
+  await pickExercise('プランク')
+  await clickText('メニューに追加')
+  await sleep(400)
+  const routineItems = await page.$$eval('.re__item', (els) => els.length)
+  assert(routineItems === 2, `メニューに2種目入る (${routineItems})`)
+  await clickLabel('腕立て伏せのセット数を1set増やす')
+  await shot('routine-editor')
+  await clickText('保存')
+  await sleep(500)
+  const routineRow = await page.$$eval('.rs__item', (els) => els.map((e) => e.textContent ?? ''))
+  assert(routineRow.some((t) => t.includes('テストメニュー') && t.includes('腕立て伏せ 4×10回')), `メニュー一覧に出る (${routineRow.join('|')})`)
+  assert(routineRow.some((t) => t.includes('今日のやつ') && t.includes('腕立て伏せ 2×11回') && t.includes('プランク 1×')), `セッションから保存したメニューが出る (${routineRow.join('|')})`)
+  await clickLabel('テストメニュー を開始')
+  await sleep(600)
+  await shot('session-from-routine')
+  const planGhost = await page.$$eval('.xb__set--ghost', (els) => els.length)
+  assert(planGhost === 7, `メニューの計画（4+3）がゴースト行になる (${planGhost})`)
+  const planLabel = await textOf('.xb__sub')
+  assert(planLabel.includes('メニュー 4×10回'), `見出しにメニューの計画が出る (${planLabel})`)
+  await clickText('終了')
+  await sleep(600)
 
   // 6. 食事: フード登録 → ワンタップ記録
   await clickText('食事', { tag: 'a' })
@@ -306,13 +353,37 @@ try {
     changeTargets: true,
     suggestedTargets: { kcal: 2300, protein: 135, fat: 60, carbs: 300 },
   }
+  const mockClassify = {
+    type: 'reps',
+    bodyPart: 'chest',
+    useWeight: false,
+    formFamily: 'pushup',
+    met: 4.5,
+    restSec: 60,
+    tips: ['腰を反らせない', '胸を床すれすれまで下ろす', '肩甲骨を寄せてから押す'],
+    avoid: '肘が外に開きすぎる',
+    description: '腕立て伏せの派生で胸と体幹を使う種目',
+  }
+  const mockVideo = {
+    name: '10分 全身自重',
+    items: [
+      { name: '腕立て伏せ', sets: 3, reps: 12, seconds: 0, type: 'reps', bodyPart: 'chest', useWeight: false, formFamily: 'pushup', met: 3.8 },
+      { name: 'ベアクロール', sets: 3, reps: 0, seconds: 30, type: 'time', bodyPart: 'full', useWeight: false, formFamily: 'none', met: 5 },
+    ],
+    confidence: 'medium',
+    note: 'モックの読み取り結果です',
+  }
   const mockOpenAi = (req) => {
+    if (req.url().startsWith('https://noembed.com/')) {
+      req.respond({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ title: '【10分】全身自重トレ' }) })
+      return
+    }
     if (req.url().startsWith('https://api.openai.com/')) {
       // system prompt に「パッケージ」が含まれていれば成分表の読み取り、それ以外は食事の推定
       const body = req.postData() ?? ''
       const isLabel = body.includes('nutrition_label')
       const isWeekly = body.includes('weekly_review')
-      const content = isWeekly ? mockWeekly : isLabel ? mockLabel : mockEstimate
+      const content = body.includes('exercise_classification') ? mockClassify : body.includes('video_workout') ? mockVideo : isWeekly ? mockWeekly : isLabel ? mockLabel : mockEstimate
       req.respond({
         status: 200,
         contentType: 'application/json',
@@ -359,6 +430,53 @@ try {
   await sleep(600)
   const labelLogged = await page.$$eval('.mel__row', (els) => els.some((e) => e.textContent?.includes('サラダチキン')))
   assert(labelLogged, '成分表から登録した食品が今日の記録に入る')
+  // 8f. 種目の追加: 名前から AI で判定 → フォームが埋まる → 保存
+  await page.goto(`${BASE}#/workout`, { waitUntil: 'networkidle0' })
+  await sleep(400)
+  await clickText('今日もう1回始める')
+  await sleep(400)
+  await page.click('.ep__new')
+  await sleep(400)
+  await typeInto('.sheet input[placeholder*="リュック加重"]', 'ヒンズープッシュアップ')
+  await clickText('名前から ChatGPT で判定')
+  await page.waitForSelector('.xf__guide', { timeout: 8000 })
+  const classifiedPart = await page.$eval('.sheet select', (s) => s.value)
+  assert(classifiedPart === 'chest', `AI 判定で部位が入る (${classifiedPart})`)
+  const classifiedMet = await page.$eval('.sheet input[placeholder="3.8"], .sheet input[placeholder="4"]', (i) => i.value).catch(() => null)
+  assert(classifiedMet === '4.5', `AI 判定で MET が入る (${classifiedMet})`)
+  await shot('exercise-ai-classify')
+  await clickText('保存')
+  await sleep(500)
+  const inPicker = await page.$$eval('.ep__name', (els) => els.some((e) => e.textContent === 'ヒンズープッシュアップ'))
+  assert(inPicker, 'AI 判定した種目がピッカーに出る')
+  await clickLabel('ヒンズープッシュアップ のフォームを見る')
+  await sleep(400)
+  const guideTips = await page.$$eval('.eg__tips li', (els) => els.length)
+  assert(guideTips === 3, `自作種目にもフォームのコツが出る (${guideTips})`)
+  await clickLabel('閉じる')
+  await sleep(300)
+  await clickLabel('閉じる')
+  await sleep(300)
+
+  // 8g. YouTube からメニューを取り込む（noembed と OpenAI をモック）
+  await clickText('YouTube から')
+  await sleep(400)
+  await typeInto('.sheet input[type="url"]', 'https://youtu.be/dQw4w9WgXcQ')
+  await page.type('.ri__text', '0:30 腕立て伏せ 12回×3')
+  await clickText('ChatGPT で読み取る')
+  await page.waitForSelector('.ri__items', { timeout: 8000 })
+  const importedItems = await page.$$eval('.ri__item', (els) => els.length)
+  assert(importedItems === 2, `動画から2種目読み取る (${importedItems})`)
+  const mappedFirst = await page.$eval('.ri__item select', (s) => s.value)
+  assert(mappedFirst === 'ex_pushup', `既存種目に名寄せされる (${mappedFirst})`)
+  const mappedSecond = await page.$$eval('.ri__item select', (els) => els[1]?.value)
+  assert(mappedSecond === '__new__', `未知の種目は新規作成になる (${mappedSecond})`)
+  await shot('routine-import')
+  await clickText('メニューとして保存')
+  await sleep(600)
+  const importedRow = await page.$$eval('.rs__item', (els) => els.map((e) => e.textContent ?? ''))
+  assert(importedRow.some((t) => t.includes('10分 全身自重') && t.includes('ベアクロール 3×30秒')), `取り込んだメニューが一覧に出る (${importedRow.join('|')})`)
+
   // 8e. 記録タブ: 週の振り返り → AI の一言 → 目標提案を反映
   await page.goto(`${BASE}#/log`, { waitUntil: 'networkidle0' })
   await sleep(500)

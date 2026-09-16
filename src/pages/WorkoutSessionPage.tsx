@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CheckCheck, CopyCheck, Dumbbell, Flame, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { BookmarkPlus, CheckCheck, CopyCheck, Dumbbell, Flame, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { db } from '../db/db'
-import { addSet, deleteWorkout, finishWorkout, getLastSetsForExercise, reopenWorkout, setWorkoutExercises } from '../db/repo'
-import { formatDuration, formatLong } from '../lib/date'
+import { addSet, deleteWorkout, finishWorkout, getPlannedSets, mergeRoutineItems, reopenWorkout, routineItemsFromSets, setWorkoutExercises, type PlannedSet } from '../db/repo'
+import { formatDuration, formatLong, formatShort } from '../lib/date'
 import { useToday } from '../hooks/useToday'
 import { tapHaptic } from '../lib/feedback'
 import { useSettings } from '../hooks/useSettings'
@@ -18,6 +18,7 @@ import { ExerciseBlock } from '../features/workout/ExerciseBlock'
 import { ExercisePickerSheet } from '../features/workout/ExercisePickerSheet'
 import { useRecentExerciseIds } from '../features/workout/useRecentExerciseIds'
 import { useWeightInfo } from '../features/workout/useDayBurn'
+import { RoutineEditorSheet } from '../features/routine/RoutineEditorSheet'
 import { estimateBurnKcal } from '../lib/calories'
 import { useBusy } from '../hooks/useBusy'
 import type { WorkoutSet } from '../types'
@@ -38,29 +39,48 @@ export function WorkoutSessionPage() {
   const { kg: weightKg, recorded: weightRecorded } = useWeightInfo()
   const [bulkRunning, setBulkRunning] = useState(false)
   const workout = useLiveQuery(async () => (await db.workouts.get(id)) ?? null, [id])
+  // メニューから始めた場合は「メニューを更新」にする
+  const sourceRoutine = useLiveQuery(async () => (workout?.routineId ? ((await db.routines.get(workout.routineId)) ?? null) : null), [workout?.routineId])
   const sets = useLiveQuery(() => db.sets.where('workoutId').equals(id).sortBy('order'), [id])
   const exerciseList = useLiveQuery(() => db.exercises.toArray(), [])
   const recentIds = useRecentExerciseIds()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [saveRoutineOpen, setSaveRoutineOpen] = useState(false)
   const [now, setNow] = useState(() => Date.now())
 
   const exercises = useMemo(() => new Map((exerciseList ?? []).map((e) => [e.id, e])), [exerciseList])
   const exerciseKey = workout?.exerciseIds.join(',') ?? ''
+  const planKey = JSON.stringify(workout?.plan ?? null)
   const active = !!workout && !workout.endedAt
 
-  // 各種目の前回セット（「全種目を前回と同じで記録」用）
+  // 各種目のプリセット（メニューの計画 or 前回セット）。「一括記録」用
+  const plan = workout?.plan
   const plannedByExercise = useLiveQuery(async () => {
     const ids = exerciseKey ? exerciseKey.split(',') : []
-    const entries = await Promise.all(ids.map(async (exId) => [exId, await getLastSetsForExercise(exId, id)] as const))
-    return new Map<string, WorkoutSet[]>(entries)
-  }, [exerciseKey, id])
+    const entries = await Promise.all(ids.map(async (exId) => [exId, await getPlannedSets({ id, plan }, exId)] as const))
+    return new Map<string, PlannedSet[]>(entries)
+    // planKey は plan の内容が変わった時だけ再計算するためのキー
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exerciseKey, planKey, id])
 
   useEffect(() => {
     if (!active) return
     const t = window.setInterval(() => setNow(Date.now()), CLOCK_TICK_MS)
     return () => window.clearInterval(t)
   }, [active])
+
+  // 「メニューとして保存」の初期値。毎秒の再レンダーでエディタの入力がリセットされないよう identity を固定する
+  // 元メニューがある場合は、その種目構成を保ったまま今日の実績で上書きする（途中でやめた日に種目が消えないように）
+  const routineInitial = useMemo(() => {
+    if (!workout || !sets) return undefined
+    const fromSets = routineItemsFromSets(workout.exerciseIds, sets, exercises)
+    return {
+      name: `${formatShort(workout.date)} のメニュー`,
+      items: sourceRoutine ? mergeRoutineItems(sourceRoutine.items, fromSets) : fromSets,
+      source: 'workout' as const,
+    }
+  }, [workout, sets, exercises, sourceRoutine])
 
   if (workout === undefined || sets === undefined || exerciseList === undefined) {
     return (
@@ -124,7 +144,7 @@ export function WorkoutSessionPage() {
           })
         }
         tapHaptic()
-        toast.show(`${remainingAll.length}セットを前回と同じで記録しました`, 'success')
+        toast.show(`${remainingAll.length}セットを${workout.plan ? 'メニュー通りに' : '前回と同じで'}記録しました`, 'success')
       } finally {
         setBulkRunning(false)
       }
@@ -176,7 +196,7 @@ export function WorkoutSessionPage() {
       {!readOnly && remainingAll.length >= MIN_REMAINING_FOR_BULK && (
         <button type="button" className="ws__all" onClick={() => void completeAllRemaining()} disabled={bulkRunning} aria-busy={bulkRunning}>
           <CopyCheck size={18} aria-hidden />
-          前回と同じで一括記録（残り{remainingAll.length}セット）
+          {workout.plan ? 'メニュー通りに' : '前回と同じで'}一括記録（残り{remainingAll.length}セット）
         </button>
       )}
 
@@ -210,10 +230,23 @@ export function WorkoutSessionPage() {
       )}
 
       <div className="ws__danger">
+        {totalSets > 0 && (
+          <Button variant="ghost" size="sm" icon={<BookmarkPlus size={16} aria-hidden />} onClick={() => setSaveRoutineOpen(true)}>
+            {sourceRoutine ? 'このメニューを更新' : 'メニューとして保存'}
+          </Button>
+        )}
         <Button variant="ghost" size="sm" icon={<Trash2 size={16} aria-hidden />} onClick={() => setConfirmDelete(true)}>
           このワークアウトを削除
         </Button>
       </div>
+
+      <RoutineEditorSheet
+        open={saveRoutineOpen}
+        onClose={() => setSaveRoutineOpen(false)}
+        exercises={exerciseList}
+        routine={sourceRoutine}
+        initial={routineInitial}
+      />
 
       <ExercisePickerSheet open={pickerOpen} onClose={() => setPickerOpen(false)} exercises={exerciseList} selectedIds={exerciseIds} recentIds={recentIds} onConfirm={(ids) => void addExercises(ids)} />
 

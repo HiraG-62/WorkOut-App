@@ -1,4 +1,4 @@
-import type { FoodEstimate, NutritionLabel, Profile, TargetSuggestion, Targets, WeeklyReviewResult } from '../../types'
+import type { ExerciseClassification, FoodEstimate, NutritionLabel, ParsedWorkoutResult, Profile, TargetSuggestion, Targets, WeeklyReviewResult } from '../../types'
 import type { WeekStats } from '../weekly'
 
 export interface FoodEstimateRequest {
@@ -27,6 +27,19 @@ export interface WeeklyReviewRequest {
   previous: WeekStats | null
 }
 
+export interface ExerciseClassifyRequest {
+  name: string
+  hint: string
+}
+
+export interface VideoWorkoutRequest {
+  url: string
+  /** oEmbed などで取れた動画タイトル */
+  title: string
+  /** ユーザーが貼った説明欄・チャプター */
+  description: string
+}
+
 export interface AiClient {
   estimateFood(req: FoodEstimateRequest, signal?: AbortSignal): Promise<FoodEstimate>
   estimateFoodFromText(req: FoodTextRequest, signal?: AbortSignal): Promise<FoodEstimate>
@@ -35,6 +48,10 @@ export interface AiClient {
   suggestTargets(req: TargetSuggestionRequest, signal?: AbortSignal): Promise<TargetSuggestion>
   /** 1週間の集計から振り返りと来週の一言を作る */
   reviewWeek(req: WeeklyReviewRequest, signal?: AbortSignal): Promise<WeeklyReviewResult>
+  /** 種目名から性質（単位・部位・MET・フォームのコツ）を判定する */
+  classifyExercise(req: ExerciseClassifyRequest, signal?: AbortSignal): Promise<ExerciseClassification>
+  /** 筋トレ動画の URL（＋タイトル・説明欄）からメニューを読み取る */
+  parseWorkoutVideo(req: VideoWorkoutRequest, signal?: AbortSignal): Promise<ParsedWorkoutResult>
 }
 
 export interface AiClientConfig {

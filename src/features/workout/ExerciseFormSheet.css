@@ -1,0 +1,33 @@
+.xf__note {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.xf__ai-note {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+.xf__guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.xf__tips {
+  margin: 0;
+  padding-left: 1.4em;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-2);
+}
+
+.xf__avoid {
+  font-size: 13px;
+  color: var(--warning);
+}

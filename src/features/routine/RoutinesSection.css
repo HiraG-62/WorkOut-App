@@ -1,0 +1,97 @@
+.rs__list {
+  list-style: none;
+  margin: 0 0 var(--s-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.rs__item {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.rs__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  min-height: 56px;
+}
+
+.rs__body:active {
+  background: var(--surface-2);
+}
+
+.rs__name {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.rs__yt {
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+.rs__summary {
+  font-size: 12px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rs__play {
+  width: 56px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: var(--accent-dim);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.rs__play:active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.rs__play--off {
+  opacity: 0.45;
+}
+
+.rs__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+
+/* 狭い幅ではラベルが語中で折れるので縦に積む */
+@media (max-width: 379px) {
+  .rs__actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rs__note {
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: var(--s-2);
+}

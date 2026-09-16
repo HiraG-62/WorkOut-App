@@ -4,6 +4,7 @@ import type {
   Food,
   MealEntry,
   MealSet,
+  Routine,
   Settings,
   WeeklyReview,
   WeightEntry,
@@ -39,6 +40,7 @@ class WorkoutDB extends Dexie {
   weights!: EntityTable<WeightEntry, 'id'>
   settings!: EntityTable<Settings, 'id'>
   weeklyReviews!: EntityTable<WeeklyReview, 'id'>
+  routines!: EntityTable<Routine, 'id'>
 
   constructor() {
     super('workout-app')
@@ -76,6 +78,8 @@ class WorkoutDB extends Dexie {
             if (typeof s.addBurnToTarget !== 'boolean') s.addBurnToTarget = false
           })
       })
+    // v4: セットメニュー
+    this.version(4).stores({ routines: 'id' })
     this.on('populate', () => {
       void this.exercises.bulkAdd(SEED_EXERCISES)
       void this.settings.add(DEFAULT_SETTINGS)

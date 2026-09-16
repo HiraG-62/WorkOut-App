@@ -33,8 +33,41 @@ export interface Exercise {
   formFamily?: FormFamily
   /** 運動強度 MET（消費カロリー推定用）。未設定なら動きのタイプから既定値を引く */
   met?: number
+  /** フォームのコツ（自作種目・AI 判定用。初期種目はガイド定義から引く） */
+  guide?: ExerciseGuideText
   isCustom: boolean
   archived: boolean
+  createdAt: number
+}
+
+export interface ExerciseGuideText {
+  /** フォームのポイント（3 つ程度） */
+  tips: string[]
+  /** よくある間違い */
+  avoid?: string
+}
+
+/** セットメニューの1種目分の計画 */
+export interface RoutineItem {
+  exerciseId: string
+  sets: number
+  reps?: number
+  seconds?: number
+}
+
+export type RoutineSource = 'manual' | 'workout' | 'youtube'
+
+/** セットメニュー（種目 × セット数 × 目標） */
+export interface Routine {
+  id: string
+  name: string
+  items: RoutineItem[]
+  source: RoutineSource
+  /** 取り込み元の動画 URL など */
+  sourceUrl?: string
+  note?: string
+  useCount: number
+  lastUsedAt: number
   createdAt: number
 }
 
@@ -46,6 +79,9 @@ export interface Workout {
   endedAt?: number
   /** 種目の並び順 */
   exerciseIds: string[]
+  /** メニューから始めた場合の計画。ゴースト行（プリセット）はこれを優先する */
+  plan?: RoutineItem[]
+  routineId?: string
 }
 
 export interface WorkoutSet {
@@ -217,4 +253,46 @@ export interface WeeklyReviewResult {
   advice: string
   changeTargets: boolean
   suggestedTargets: Targets
+}
+
+/** AI による種目の判定結果 */
+export interface ExerciseClassification {
+  type: ExerciseType
+  bodyPart: BodyPart
+  useWeight: boolean
+  /** 動きのタイプ。該当なしは 'none' */
+  formFamily: FormFamily | 'none'
+  met: number
+  restSec: number
+  tips: string[]
+  avoid: string
+  /** 1文の説明 */
+  description: string
+}
+
+/** AI が動画などから読み取ったメニュー */
+export interface ParsedWorkoutItem {
+  name: string
+  sets: number
+  /** 回数種目なら 1 以上、時間種目なら 0 */
+  reps: number
+  /** 時間種目なら 1 以上、回数種目なら 0 */
+  seconds: number
+  type: ExerciseType
+  bodyPart: BodyPart
+  useWeight: boolean
+  formFamily: FormFamily | 'none'
+  met: number
+}
+
+export interface ParsedWorkout {
+  name: string
+  items: ParsedWorkoutItem[]
+  confidence: 'low' | 'medium' | 'high'
+  note: string
+}
+
+export interface ParsedWorkoutResult extends ParsedWorkout {
+  /** 動画本体を読んで判定したか（Gemini で成功した場合のみ true） */
+  watched: boolean
 }

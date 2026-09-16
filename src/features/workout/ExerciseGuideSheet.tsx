@@ -15,7 +15,7 @@ interface ExerciseGuideSheetProps {
 /** 種目の図と正しいフォームのポイントを見るシート。初期種目はガイド付き、自作種目は図のみ */
 export function ExerciseGuideSheet({ exercise, onClose, progressionName }: ExerciseGuideSheetProps) {
   const family = resolveFamily(exercise)
-  const guide = exercise ? EXERCISE_GUIDES[exercise.id] : undefined
+  const guide = exercise ? (exercise.guide ?? EXERCISE_GUIDES[exercise.id]) : undefined
   return (
     <Sheet open={exercise !== null} onClose={onClose} title={exercise?.name ?? ''}>
       {exercise && (

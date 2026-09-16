@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowUpRight, Check, MoreHorizontal, Play, Square, Trash2 } from 'lucide-react'
-import { addSet, deleteSet, getLastSetsForExercise, removeExerciseFromWorkout, restoreExerciseToWorkout, setWorkoutExercises, updateSet } from '../../db/repo'
+import { addSet, deleteSet, getLastSetsForExercise, planToSets, removeExerciseFromWorkout, restoreExerciseToWorkout, setWorkoutExercises, updateSet } from '../../db/repo'
 import { db } from '../../db/db'
 import { tapHaptic, unlockAudio } from '../../lib/feedback'
 import { formatRelative } from '../../lib/date'
@@ -68,7 +68,9 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
   const draftKey = useRef('')
 
   const done = sets.length
-  const planned = lastSets ?? []
+  // メニューから始めた場合は計画（セット数 × 目標）をプリセットにし、無ければ前回のセット
+  const planItem = workout.plan?.find((p) => p.exerciseId === exercise.id)
+  const planned = planItem ? planToSets(planItem, exercise.type, lastSets ?? []) : (lastSets ?? [])
   const isTime = exercise.type === 'time'
   const restSec = exercise.restSec ?? restSecDefault
   const progressionCandidate = exercise.progressionId ? exercises.get(exercise.progressionId) : undefined
@@ -77,10 +79,11 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
   // 次のセットの初期値: 前回の同じ番目のセット → 前回の最後 → 今回の最後 → デフォルト
   useEffect(() => {
     if (lastSets === undefined) return
-    const key = `${exercise.id}:${done}:${lastSets.length}`
+    const key = `${exercise.id}:${done}:${lastSets.length}:${planItem ? `${planItem.sets}/${planItem.reps ?? ''}/${planItem.seconds ?? ''}` : ''}`
     if (draftKey.current === key) return
     draftKey.current = key
-    const src = lastSets[done] ?? lastSets[lastSets.length - 1] ?? sets[sets.length - 1]
+    const base = planItem ? planToSets(planItem, exercise.type, lastSets) : lastSets
+    const src = base[done] ?? base[base.length - 1] ?? sets[sets.length - 1]
     // 加重はセッション内で一定なことが多いので、今日すでに記録した値を最優先にする
     const todayLast = sets[sets.length - 1]
     const weightSrc = todayLast ?? src
@@ -89,7 +92,7 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
       seconds: Math.max(SECONDS_STEP, src?.seconds ?? DEFAULT_SECONDS),
       weightKg: weightSrc ? (weightSrc.weightKg ?? 0) : exercise.useWeight ? DEFAULT_WEIGHT : 0,
     })
-  }, [lastSets, done, sets, exercise.id, exercise.useWeight])
+  }, [lastSets, done, sets, exercise.id, exercise.type, exercise.useWeight, planItem])
 
   useEffect(() => {
     if (timing === null) return
@@ -194,7 +197,11 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
         <div className="xb__title">
           <h2 className="xb__name">{exercise.name}</h2>
           <p className="xb__sub">
-            {lastWorkout ? `前回 ${formatRelative(lastWorkout.date)}: ${planned.map((s) => formatSet(s, exercise)).join(' / ')}` : '初めての種目'}
+            {planItem
+              ? `メニュー ${planItem.sets}×${formatSet(planned[0] ?? {}, exercise)}${lastWorkout && lastSets ? ` · 前回 ${lastSets.length}セット` : ''}`
+              : lastWorkout
+                ? `前回 ${formatRelative(lastWorkout.date)}: ${planned.map((s) => formatSet(s, exercise)).join(' / ')}`
+                : '初めての種目'}
           </p>
         </div>
         {!readOnly && (
@@ -217,7 +224,7 @@ export function ExerciseBlock({ workout, exercise, sets, exercises, restSecDefau
         {!readOnly &&
           remainingPlanned.map((s, i) => (
             <li key={`p${i}`}>
-              <button type="button" className="xb__set xb__set--ghost" onClick={() => void completePlanned(s)} disabled={locked} aria-label={`セット${done + i + 1}を前回と同じ ${formatSet(s, exercise)} で記録`}>
+              <button type="button" className="xb__set xb__set--ghost" onClick={() => void completePlanned(s)} disabled={locked} aria-label={`セット${done + i + 1}を${planItem ? 'メニュー通り' : '前回と同じ'} ${formatSet(s, exercise)} で記録`}>
                 <span className="xb__set-no">{done + i + 1}</span>
                 <span className="display xb__set-val">{formatSet(s, exercise)}</span>
                 <span className="xb__set-hint">タップで記録</span>

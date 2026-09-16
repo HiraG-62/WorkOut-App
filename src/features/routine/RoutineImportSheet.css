@@ -1,0 +1,138 @@
+.ri__text {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: var(--s-3);
+}
+
+.ri__text:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+.ri__hint {
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: var(--s-1);
+}
+
+.ri__error {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.ri__note {
+  font-size: 13px;
+  color: var(--text-2);
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+  line-height: 1.6;
+}
+
+.ri__conf {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+}
+
+.ri__conf--high {
+  color: var(--success);
+}
+
+.ri__conf--medium {
+  color: var(--warning);
+}
+
+.ri__conf--low {
+  color: var(--danger);
+}
+
+.ri__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.ri__item {
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.ri__item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.ri__item-name {
+  font-weight: 700;
+  font-size: 15px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ri__item-target {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.ri__video {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--text-2);
+  font-size: 14px;
+  min-height: var(--tap);
+  text-decoration: none;
+}
+
+.ri__video:active {
+  color: var(--text);
+}
+
+.ri__progress {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 14px;
+  color: var(--text-2);
+  padding: var(--s-2) 0;
+}
+
+.ri__spinner {
+  color: var(--accent);
+  animation: ri-spin 1s linear infinite;
+}
+
+@keyframes ri-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ri__spinner {
+    animation: none;
+  }
+}

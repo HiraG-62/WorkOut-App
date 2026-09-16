@@ -13,6 +13,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { Button } from '../components/ui/Button'
 import { ExercisePickerSheet } from '../features/workout/ExercisePickerSheet'
 import { useRecentExerciseIds } from '../features/workout/useRecentExerciseIds'
+import { RoutinesSection } from '../features/routine/RoutinesSection'
 import { summarizeSets } from '../features/workout/useWorkoutStats'
 import { useWeightKg } from '../features/workout/useDayBurn'
 import { estimateBurnKcal } from '../lib/calories'
@@ -116,6 +117,8 @@ export function WorkoutPage() {
           </button>
         </div>
       )}
+
+      <RoutinesSection exercises={exerciseList} canStart={!todayWorkout || !!todayWorkout.endedAt} />
 
       {(history.length > 0 || workouts.length === 0) && (
       <Section title="履歴">

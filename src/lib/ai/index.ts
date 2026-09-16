@@ -25,6 +25,11 @@ export async function createAiClient(config: AiConfig): Promise<AiClient | null>
   }
 }
 
+/** 動画本体（YouTube URL）を読めるプロバイダか */
+export function canWatchVideo(provider: AiConfig['provider']): boolean {
+  return provider === 'gemini'
+}
+
 export function isAiConfigured(config: AiConfig): boolean {
   return config.keys[config.provider].trim().length > 0
 }

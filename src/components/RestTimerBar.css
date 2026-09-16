@@ -17,6 +17,7 @@
 body.has-sheet .rest-bar {
   bottom: auto;
   top: calc(var(--safe-top) + var(--s-3));
+  animation: none;
 }
 
 .rest-bar__progress {

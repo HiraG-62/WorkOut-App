@@ -272,8 +272,28 @@ export async function copyMeals(fromDate: string, toDate = todayKey()): Promise<
     date: toDate,
     createdAt: toStart + (m.createdAt - fromStart),
   }))
-  await db.meals.bulkAdd(copies)
+  await db.transaction('rw', db.meals, db.foods, async () => {
+    await db.meals.bulkAdd(copies)
+    // フード由来の記録は使用回数にも数える（取り消し時の unlogFood と対称にする）
+    for (const c of copies) {
+      if (!c.foodId) continue
+      const food = await db.foods.get(c.foodId)
+      if (!food) continue
+      const slot = timeSlot(new Date(c.createdAt))
+      const slotCounts: Food['slotCounts'] = [...food.slotCounts]
+      slotCounts[slot] += 1
+      await db.foods.update(food.id, { useCount: food.useCount + 1, lastUsedAt: Date.now(), slotCounts })
+    }
+  })
   return copies.map((c) => c.id)
+}
+
+/** copyMeals の取り消し。統計も戻す */
+export async function uncopyMeals(ids: string[]): Promise<void> {
+  for (const id of ids) {
+    const entry = await db.meals.get(id)
+    if (entry) await unlogFood(entry)
+  }
 }
 
 export async function addMealSet(name: string, items: MealSet['items']): Promise<MealSet> {

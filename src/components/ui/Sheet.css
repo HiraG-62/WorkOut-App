@@ -48,9 +48,6 @@
   cursor: grab;
 }
 
-.sheet__head {
-  touch-action: none;
-}
 
 .sheet__handle {
   width: 40px;
@@ -61,6 +58,7 @@
 }
 
 .sheet__head {
+  touch-action: none;
   display: flex;
   align-items: center;
   justify-content: space-between;

@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, ChevronLeft, ChevronRight, CopyPlus, Layers, Search, UtensilsCrossed, Zap } from 'lucide-react'
-import { copyMeals } from '../db/repo'
+import { copyMeals, uncopyMeals } from '../db/repo'
 import { addDays, formatRelative } from '../lib/date'
 import { useToday } from '../hooks/useToday'
 import { useBusy } from '../hooks/useBusy'
-import { db } from '../db/db'
 import { isAiConfigured } from '../lib/ai'
 import { useSettings } from '../hooks/useSettings'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -56,7 +55,7 @@ export function MealsPage() {
         toast.show('前日の記録がありません', 'info')
         return
       }
-      toast.show(`前日の${ids.length}品をコピーしました`, 'success', { label: '取り消す', onClick: () => void db.meals.bulkDelete(ids) }, UNDO_MS)
+      toast.show(`前日の${ids.length}品をコピーしました`, 'success', { label: '取り消す', onClick: () => void uncopyMeals(ids) }, UNDO_MS)
     })
 
   return (

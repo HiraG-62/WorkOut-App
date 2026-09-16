@@ -76,49 +76,49 @@ export const FIGURES: Record<FormFamily, FormFigure> = {
     props: [GROUND],
     poses: [
       { head: [96, 40], neck: [88, 44], hip: [50, 56], legs: [{ knee: [30, 62], ankle: [10, 70] }], arms: [{ elbow: [88, 58], hand: [88, 72] }] },
-      { head: [96, 56], neck: [88, 60], hip: [50, 66], legs: [{ knee: [30, 68], ankle: [10, 70] }], arms: [{ elbow: [100, 66], hand: [88, 72] }] },
+      { head: [96, 56], neck: [88, 60], hip: [50, 66], legs: [{ knee: [30, 68], ankle: [10, 70] }], arms: [{ elbow: [74, 68], hand: [88, 72] }] },
     ],
   },
   pushup_knee: {
     props: [GROUND],
     poses: [
       { head: [96, 40], neck: [88, 44], hip: [52, 58], legs: [{ knee: [36, 72], ankle: [16, 66] }], arms: [{ elbow: [88, 58], hand: [88, 72] }] },
-      { head: [96, 56], neck: [88, 60], hip: [52, 66], legs: [{ knee: [36, 72], ankle: [16, 66] }], arms: [{ elbow: [100, 66], hand: [88, 72] }] },
+      { head: [96, 56], neck: [88, 60], hip: [52, 66], legs: [{ knee: [36, 72], ankle: [16, 66] }], arms: [{ elbow: [74, 68], hand: [88, 72] }] },
     ],
   },
   pushup_wall: {
     props: [GROUND, { kind: 'wall', from: [100, 8], to: [100, 72] }],
     poses: [
       { head: [58, 14], neck: [60, 22], hip: [66, 46], legs: [{ knee: [70, 60], ankle: [74, 72] }], arms: [{ elbow: [80, 30], hand: [100, 34] }] },
-      { head: [76, 16], neck: [76, 24], hip: [74, 48], legs: [{ knee: [74, 60], ankle: [74, 72] }], arms: [{ elbow: [88, 42], hand: [100, 34] }] },
+      { head: [82, 16], neck: [82, 24], hip: [76, 48], legs: [{ knee: [74, 60], ankle: [74, 72] }], arms: [{ elbow: [72, 40], hand: [100, 34] }] },
     ],
   },
   pike_pushup: {
     props: [GROUND],
     poses: [
       { head: [76, 46], neck: [74, 40], hip: [56, 20], legs: [{ knee: [42, 46], ankle: [28, 72] }], arms: [{ elbow: [84, 56], hand: [90, 72] }] },
-      { head: [84, 64], neck: [80, 54], hip: [58, 24], legs: [{ knee: [42, 48], ankle: [28, 72] }], arms: [{ elbow: [96, 62], hand: [90, 72] }] },
+      { head: [84, 64], neck: [80, 54], hip: [58, 24], legs: [{ knee: [42, 48], ankle: [28, 72] }], arms: [{ elbow: [70, 64], hand: [90, 72] }] },
     ],
   },
   handstand: {
     props: [GROUND, { kind: 'wall', from: [80, 6], to: [80, 72] }],
     poses: [
       { head: [62, 62], neck: [62, 54], hip: [66, 30], legs: [{ knee: [70, 18], ankle: [76, 6] }], arms: [{ elbow: [62, 64], hand: [62, 72] }] },
-      { head: [62, 66], neck: [62, 58], hip: [66, 32], legs: [{ knee: [70, 20], ankle: [76, 8] }], arms: [{ elbow: [70, 66], hand: [62, 72] }] },
+      { head: [62, 66], neck: [62, 58], hip: [66, 32], legs: [{ knee: [70, 20], ankle: [76, 8] }], arms: [{ elbow: [48, 66], hand: [62, 72] }] },
     ],
   },
   pullup: {
     props: [{ kind: 'bar', from: [30, 8], to: [90, 8] }],
     poses: [
       { head: [60, 26], neck: [60, 34], hip: [60, 54], legs: [{ knee: [58, 64], ankle: [60, 74] }], arms: [{ elbow: [60, 20], hand: [60, 8] }] },
-      { head: [60, 12], neck: [60, 20], hip: [60, 42], legs: [{ knee: [56, 56], ankle: [60, 68] }], arms: [{ elbow: [70, 14], hand: [60, 8] }] },
+      { head: [60, 12], neck: [60, 20], hip: [60, 42], legs: [{ knee: [56, 56], ankle: [60, 68] }], arms: [{ elbow: [66, 26], hand: [60, 8] }] },
     ],
   },
   row: {
     props: [GROUND, { kind: 'bar', from: [40, 30], to: [80, 30] }],
     poses: [
       { head: [74, 50], neck: [68, 52], hip: [44, 60], legs: [{ knee: [30, 62], ankle: [18, 70] }], arms: [{ elbow: [66, 42], hand: [64, 30] }] },
-      { head: [76, 36], neck: [70, 40], hip: [46, 56], legs: [{ knee: [30, 62], ankle: [18, 70] }], arms: [{ elbow: [76, 44], hand: [64, 30] }] },
+      { head: [76, 36], neck: [70, 40], hip: [46, 56], legs: [{ knee: [30, 62], ankle: [18, 70] }], arms: [{ elbow: [56, 46], hand: [64, 30] }] },
     ],
   },
   superman: {
@@ -228,8 +228,8 @@ export const FIGURES: Record<FormFamily, FormFigure> = {
   dips: {
     props: [{ kind: 'bar', from: [36, 34], to: [48, 34] }, { kind: 'bar', from: [72, 34], to: [84, 34] }],
     poses: [
-      { head: [60, 12], neck: [60, 20], hip: [60, 42], legs: [{ knee: [56, 56], ankle: [64, 66] }], arms: [{ elbow: [74, 28], hand: [78, 34] }] },
-      { head: [62, 24], neck: [62, 32], hip: [60, 52], legs: [{ knee: [56, 64], ankle: [64, 74] }], arms: [{ elbow: [80, 22], hand: [78, 34] }] },
+      { head: [60, 12], neck: [60, 20], hip: [60, 42], legs: [{ knee: [56, 56], ankle: [64, 66] }], arms: [{ elbow: [50, 28], hand: [42, 34] }] },
+      { head: [64, 26], neck: [62, 34], hip: [60, 54], legs: [{ knee: [56, 66], ankle: [64, 76] }], arms: [{ elbow: [42, 20], hand: [42, 34] }] },
     ],
   },
   bench_dips: {

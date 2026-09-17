@@ -107,7 +107,7 @@ export function targetUserPrompt(profile: Profile, weightKg: number, currentTarg
 
 export const WeeklyReviewSchema = z.object({
   summary: z.string().describe('今週の総括を1〜2文で（日本語）。数字を1つは入れる'),
-  advice: z.string().describe('来週に向けた具体的な一言アドバイスを1〜2文で（日本語）。行動が1つに絞られていること'),
+  advice: z.string().describe('来週に向けた具体的な一言アドバイスを2〜3文で（日本語）。トレーニングについて1つ、食事について1つ、それぞれ行動を1つに絞って含めること'),
   changeTargets: z.boolean().describe('目標値（カロリー/PFC）を変えたほうがよいなら true。変えなくてよければ false'),
   suggestedTargets: z.object({
     kcal: z.number().min(0),
@@ -121,7 +121,8 @@ export const WEEKLY_REVIEW_JSON_SCHEMA = z.toJSONSchema(WeeklyReviewSchema)
 
 export const WEEKLY_SYSTEM_PROMPT = `あなたは自宅で自重トレーニングをする人を支えるパーソナルトレーナー兼管理栄養士です。1週間のトレーニング・食事・体重の集計から、短い振り返りと来週の一言アドバイスを返します。
 - 数字は集計値をそのまま使い、根拠のない数値を作らない
-- 褒めるところは具体的に褒め、直すところは1つに絞る（あれもこれも言わない）
+- 褒めるところは具体的に褒め、直すところはトレーニング・食事それぞれ1つずつに絞る（あれもこれも言わない）
+- advice はトレーニングと食事の両方に必ず触れる。片方の記録がない週は、そちらは「まず記録する」を来週の行動にする
 - 消費カロリーは目安（誤差 ±30%）として扱い、それだけを根拠に食事量を決めさせない
 - 体重は日々の変動が大きいので、週平均どうしの比較で判断する
 - 記録が少ない週は、記録を続けること自体を来週の目標にしてよい
@@ -243,9 +244,9 @@ const CoachWorkoutItemSchema = z.object({
 
 export const CoachAnswerSchema = z.object({
   summary: z.string().describe('今の状況の読み取りを1〜2文で（日本語）。渡されたデータの数字を1つ以上入れる'),
-  advice: z.array(z.string()).describe('今日から実行できる行動を2〜4個、各1文で（日本語）'),
-  mealIdeas: z.array(CoachMealIdeaSchema).describe('料理の提案。0〜4件。相談内容が食事に関係なければ空配列'),
-  hasWorkoutIdea: z.boolean().describe('トレーニングメニューを提案するなら true。食事だけの相談なら false'),
+  advice: z.array(z.string()).describe('今日から実行できる行動を2〜4個、各1文で（日本語）。相談の話題（食事 / トレーニング）の範囲内に限る'),
+  mealIdeas: z.array(CoachMealIdeaSchema).describe('料理の提案。0〜4件。相談が食事に触れていなければ必ず空配列'),
+  hasWorkoutIdea: z.boolean().describe('相談がトレーニングに触れているなら true。食事だけの相談なら必ず false'),
   workoutIdea: z
     .object({
       name: z.string().describe('メニュー名（20文字以内、日本語）。hasWorkoutIdea が false なら空文字'),
@@ -259,6 +260,7 @@ export const COACH_ANSWER_JSON_SCHEMA = z.toJSONSchema(CoachAnswerSchema)
 
 export const COACH_SYSTEM_PROMPT = `あなたは自宅で自重トレーニングをする人の専属コーチ兼管理栄養士です。相談に対して、渡された実データを根拠に具体的に答えます。
 - 【今の状況】の数字・品名・種目を必ず根拠にし、一般論だけで答えない。summary にはその数字を入れる
+- まず相談の話題を「食事」「トレーニング」「両方」のどれかに判定し、その範囲だけに答える。食事の相談ならトレーニングの提案・助言（hasWorkoutIdea・advice）を一切入れず、トレーニングの相談なら食事の提案・助言（mealIdeas・advice）を一切入れない。両方に触れる相談や、どちらとも言えない相談（停滞・体重が減らない等）だけ両方を扱う
 - ユーザーの要望（簡単・安い・コンビニで済ませたい・時間がないなど）を最優先する。要望に反する提案はしない
 - mealIdeas は日本のスーパー・コンビニで手に入る材料だけで作れるものにし、作り方は1〜2文で済むものだけを挙げる
 - 栄養値は1人前（unitLabel の1単位）あたりの現実的な推定値にする

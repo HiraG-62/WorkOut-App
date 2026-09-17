@@ -20,6 +20,8 @@ interface LineChartProps {
   zeroBased?: boolean
   /** 目盛りを整数にする（回数・秒数など） */
   integerTicks?: boolean
+  /** y軸目盛り・最終点ラベルの表示形式（例: 歩数を 8.2k にする）。未指定なら現状どおり */
+  yTickFormat?: (v: number) => string
 }
 
 const W = 320
@@ -39,6 +41,7 @@ export function LineChart({
   ariaLabel,
   zeroBased = false,
   integerTicks = false,
+  yTickFormat,
 }: LineChartProps) {
   const model = useMemo(() => {
     const ys = points.map((p) => p.y).filter((y): y is number => y !== null)
@@ -109,7 +112,7 @@ export function LineChart({
           <g key={g.y}>
             <line x1={PAD_L} x2={W - PAD_R} y1={g.y} y2={g.y} className="chart__grid" />
             <text x={PAD_L - 6} y={g.y + 3.5} className="chart__ytick" textAnchor="end">
-              {integerTicks ? Math.round(g.v) : Math.round(g.v * 10) / 10}
+              {yTickFormat ? yTickFormat(g.v) : integerTicks ? Math.round(g.v) : Math.round(g.v * 10) / 10}
             </text>
           </g>
         ))}
@@ -127,7 +130,7 @@ export function LineChart({
             className="chart__last"
             textAnchor={model.lastIdx > points.length / 2 ? 'end' : 'middle'}
           >
-            {model.last.y}
+            {yTickFormat ? yTickFormat(model.last.y) : model.last.y}
             {unit}
           </text>
         )}

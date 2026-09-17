@@ -36,6 +36,17 @@
   color: var(--fat) !important;
 }
 
+.lg__avg {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-bottom: var(--s-2);
+}
+
+.lg__avg .num {
+  color: var(--text);
+  font-size: 15px;
+}
+
 .lg__controls {
   display: flex;
   flex-direction: column;

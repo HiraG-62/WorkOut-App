@@ -9,6 +9,7 @@ import { Segmented } from '../components/ui/Field'
 import { LineChart, type LinePoint } from '../components/charts/LineChart'
 import { ActivityCalendar } from '../components/charts/ActivityCalendar'
 import { WeightQuick } from '../features/weight/WeightQuick'
+import { DailyQuick } from '../features/daily/DailyQuick'
 import { WeeklyReviewCard } from '../features/review/WeeklyReviewCard'
 import './LogPage.css'
 
@@ -16,6 +17,8 @@ const MOVING_AVG_DAYS = 7
 const RANGES = { 30: '30日', 90: '90日' } as const
 type RangeKey = keyof typeof RANGES
 const MAX_SESSIONS = 20
+// 歩数の y 軸目盛りをこの値以上で「8.2k」のような表記にする
+const STEPS_TICK_K_THRESHOLD = 1000
 
 function movingAverage(values: (number | null)[], window: number): (number | null)[] {
   return values.map((_, i) => {
@@ -25,11 +28,23 @@ function movingAverage(values: (number | null)[], window: number): (number | nul
   })
 }
 
+/** 期間内の平均（記録がある日だけ）。1件もなければ null */
+function periodAverage(points: LinePoint[]): number | null {
+  const ys = points.map((p) => p.y).filter((y): y is number => y !== null)
+  if (ys.length === 0) return null
+  return ys.reduce((a, b) => a + b, 0) / ys.length
+}
+
+function stepsTickFormat(v: number): string {
+  return v >= STEPS_TICK_K_THRESHOLD ? `${Math.round(v / 100) / 10}k` : String(v)
+}
+
 export function LogPage() {
   const today = useToday()
   const [range, setRange] = useState<RangeKey>(30)
   const [metric, setMetric] = useState<'max' | 'total'>('max')
   const weights = useLiveQuery(() => db.weights.orderBy('date').toArray(), [])
+  const metrics = useLiveQuery(() => db.dailyMetrics.orderBy('date').toArray(), [])
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').toArray(), [])
   const meals = useLiveQuery(() => db.meals.toArray(), [])
   const sets = useLiveQuery(() => db.sets.toArray(), [])
@@ -41,6 +56,20 @@ export function LogPage() {
     return lastNDays(range, today).map((d) => ({ x: d, y: map.get(d) ?? null }))
   }, [weights, range, today])
   const weightAvg = useMemo(() => movingAverage(weightPoints.map((p) => p.y), MOVING_AVG_DAYS), [weightPoints])
+
+  const sleepPoints = useMemo<LinePoint[]>(() => {
+    const map = new Map((metrics ?? []).map((m) => [m.date, m.sleepHours ?? null]))
+    return lastNDays(range, today).map((d) => ({ x: d, y: map.get(d) ?? null }))
+  }, [metrics, range, today])
+  const sleepMovingAvg = useMemo(() => movingAverage(sleepPoints.map((p) => p.y), MOVING_AVG_DAYS), [sleepPoints])
+  const sleepAvg = useMemo(() => periodAverage(sleepPoints), [sleepPoints])
+
+  const stepsPoints = useMemo<LinePoint[]>(() => {
+    const map = new Map((metrics ?? []).map((m) => [m.date, m.steps ?? null]))
+    return lastNDays(range, today).map((d) => ({ x: d, y: map.get(d) ?? null }))
+  }, [metrics, range, today])
+  const stepsMovingAvg = useMemo(() => movingAverage(stepsPoints.map((p) => p.y), MOVING_AVG_DAYS), [stepsPoints])
+  const stepsAvg = useMemo(() => periodAverage(stepsPoints), [stepsPoints])
 
   const exerciseMap = useMemo(() => new Map((exercises ?? []).map((e) => [e.id, e])), [exercises])
   const workoutDays = useMemo(() => new Set((workouts ?? []).map((w) => w.date)), [workouts])
@@ -86,9 +115,10 @@ export function LogPage() {
       <PageHeader title="記録" />
 
       <WeightQuick />
+      <DailyQuick />
 
       <Section title="週の振り返り">
-        <WeeklyReviewCard today={today} workouts={workouts ?? []} sets={sets ?? []} meals={meals ?? []} weights={weights ?? []} exercises={exerciseMap} />
+        <WeeklyReviewCard today={today} workouts={workouts ?? []} sets={sets ?? []} meals={meals ?? []} weights={weights ?? []} metrics={metrics ?? []} exercises={exerciseMap} />
       </Section>
 
       <Section
@@ -99,10 +129,53 @@ export function LogPage() {
           {weightDelta !== null && (
             <p className="lg__delta">
               期間内の変化 <span className={`num ${weightDelta < 0 ? 'lg__delta--down' : weightDelta > 0 ? 'lg__delta--up' : ''}`}>{weightDelta > 0 ? '+' : ''}{weightDelta} kg</span>
-              <span className="faint"> · 点線は7日平均</span>
+              <span className="faint"> · 点線は7日平均 · 睡眠・歩数も同じ期間</span>
             </p>
           )}
           <LineChart points={weightPoints} secondary={weightAvg} unit="kg" ariaLabel={`直近${range}日の体重推移`} xLabel={xLabelEvery(range === 30 ? 7 : 21, weightPoints.length)} />
+        </Card>
+      </Section>
+
+      <Section title="睡眠の推移">
+        <Card>
+          {sleepAvg !== null && (
+            <p className="lg__avg">
+              期間平均 <span className="num">{sleepAvg.toFixed(1)} h</span>
+              <span className="faint"> · 点線は7日平均</span>
+            </p>
+          )}
+          <LineChart
+            points={sleepPoints}
+            secondary={sleepMovingAvg}
+            unit="h"
+            color="var(--sleep)"
+            ariaLabel={`直近${range}日の睡眠時間`}
+            xLabel={xLabelEvery(range === 30 ? 7 : 21, sleepPoints.length)}
+            zeroBased
+            integerTicks
+          />
+        </Card>
+      </Section>
+
+      <Section title="歩数の推移">
+        <Card>
+          {stepsAvg !== null && (
+            <p className="lg__avg">
+              期間平均 <span className="num">{Math.round(stepsAvg).toLocaleString('ja-JP')} 歩</span>
+              <span className="faint"> · 点線は7日平均</span>
+            </p>
+          )}
+          <LineChart
+            points={stepsPoints}
+            secondary={stepsMovingAvg}
+            unit="歩"
+            color="var(--steps)"
+            ariaLabel={`直近${range}日の歩数`}
+            xLabel={xLabelEvery(range === 30 ? 7 : 21, stepsPoints.length)}
+            zeroBased
+            integerTicks
+            yTickFormat={stepsTickFormat}
+          />
         </Card>
       </Section>
 

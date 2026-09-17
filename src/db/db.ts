@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type {
   CoachThread,
+  DailyMetric,
   Exercise,
   Food,
   MealEntry,
@@ -43,6 +44,7 @@ class WorkoutDB extends Dexie {
   weeklyReviews!: EntityTable<WeeklyReview, 'id'>
   routines!: EntityTable<Routine, 'id'>
   coachThreads!: EntityTable<CoachThread, 'id'>
+  dailyMetrics!: EntityTable<DailyMetric, 'id'>
 
   constructor() {
     super('workout-app')
@@ -97,6 +99,8 @@ class WorkoutDB extends Dexie {
       })
     // v6: AI コーチの相談スレッド
     this.version(6).stores({ coachThreads: 'id, updatedAt' })
+    // v7: 睡眠・歩数の日次記録
+    this.version(7).stores({ dailyMetrics: 'id, &date' })
     this.on('populate', () => {
       void this.exercises.bulkAdd(SEED_EXERCISES)
       void this.settings.add(DEFAULT_SETTINGS)

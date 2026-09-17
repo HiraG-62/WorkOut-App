@@ -118,6 +118,11 @@
   margin-right: 2px;
 }
 
+/* 歩数は5桁で溢れやすいので1段小さくする */
+.wr__big--sm {
+  font-size: 20px;
+}
+
 .wr__sub {
   display: block;
   font-size: 12px;

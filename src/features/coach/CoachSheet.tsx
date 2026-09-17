@@ -63,11 +63,12 @@ interface CoachSheetProps {
 async function collectContext(today: string, settings: Settings): Promise<string> {
   const from = addDays(today, -(COACH_DAYS - 1))
   const weightFrom = addDays(today, -(COACH_WEIGHT_DAYS - 1))
-  const [meals, foods, workouts, weights, exerciseList, routines, latestWeight] = await Promise.all([
+  const [meals, foods, workouts, weights, metrics, exerciseList, routines, latestWeight] = await Promise.all([
     db.meals.where('date').between(from, today, true, true).toArray(),
     db.foods.filter((f) => !f.archived).toArray(),
     db.workouts.where('date').between(from, today, true, true).toArray(),
     db.weights.where('date').between(weightFrom, today, true, true).toArray(),
+    db.dailyMetrics.where('date').between(from, today, true, true).toArray(),
     db.exercises.toArray(),
     db.routines.toArray(),
     getLatestWeight(),
@@ -85,6 +86,7 @@ async function collectContext(today: string, settings: Settings): Promise<string
     exercises: new Map(exerciseList.map((e) => [e.id, e])),
     routines,
     weights,
+    metrics,
   })
 }
 

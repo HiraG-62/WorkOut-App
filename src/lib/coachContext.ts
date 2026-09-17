@@ -4,6 +4,7 @@ import {
   GOALS,
   SEX,
   type BodyPart,
+  type DailyMetric,
   type Exercise,
   type Food,
   type MealEntry,
@@ -62,6 +63,8 @@ export interface CoachContextInput {
   routines: Routine[]
   /** 直近 COACH_WEIGHT_DAYS 日分 */
   weights: WeightEntry[]
+  /** 直近 COACH_DAYS 日分 */
+  metrics: DailyMetric[]
 }
 
 function r0(n: number): number {
@@ -192,6 +195,23 @@ function weightLine({ weights }: CoachContextInput): string {
   return `${head}${formatMonthDay(first.date)} ${first.kg}kg → ${formatMonthDay(last.date)} ${last.kg}kg（${sign}${delta}kg / ${sorted.length}件）`
 }
 
+function conditionLine({ metrics }: CoachContextInput): string {
+  const head = `【睡眠・歩数・直近${COACH_DAYS}日】`
+  const sleepValues = metrics.map((m) => m.sleepHours).filter((v): v is number => v !== undefined)
+  const stepsValues = metrics.map((m) => m.steps).filter((v): v is number => v !== undefined)
+  if (sleepValues.length === 0 && stepsValues.length === 0) return `${head}${NONE}`
+  const parts: string[] = []
+  if (sleepValues.length > 0) {
+    const sleepAvg = Math.round((sleepValues.reduce((a, b) => a + b, 0) / sleepValues.length) * 10) / 10
+    parts.push(`睡眠 平均${sleepAvg}h（記録${sleepValues.length}日）`)
+  }
+  if (stepsValues.length > 0) {
+    const stepsAvg = r0(stepsValues.reduce((a, b) => a + b, 0) / stepsValues.length)
+    parts.push(`歩数 平均${stepsAvg}歩（記録${stepsValues.length}日）`)
+  }
+  return `${head}${parts.join(' / ')}`
+}
+
 /** AI に渡す「今の状況」テキストを作る純関数 */
 export function buildCoachContext(input: CoachContextInput): string {
   return [
@@ -201,5 +221,6 @@ export function buildCoachContext(input: CoachContextInput): string {
     ...sampleMealLines(input),
     workoutLine(input),
     weightLine(input),
+    conditionLine(input),
   ].join('\n')
 }

@@ -1,7 +1,7 @@
 import { db, DEFAULT_SETTINGS } from './db'
 import { newId } from '../lib/id'
 import { fromDateKey, timeSlot, todayKey } from '../lib/date'
-import type { CoachThread, Exercise, ExerciseType, Food, MealEntry, MealSet, Routine, RoutineItem, Settings, WeeklyReview, WeightEntry, Workout, WorkoutSet } from '../types'
+import type { CoachThread, DailyMetric, Exercise, ExerciseType, Food, MealEntry, MealSet, Routine, RoutineItem, Settings, WeeklyReview, WeightEntry, Workout, WorkoutSet } from '../types'
 
 // ---------- Settings ----------
 
@@ -370,6 +370,30 @@ export async function upsertWeight(kg: number, date = todayKey()): Promise<void>
 
 export async function getLatestWeight(): Promise<WeightEntry | undefined> {
   return db.weights.orderBy('date').reverse().first()
+}
+
+// ---------- Daily metrics（睡眠・歩数） ----------
+
+export type DailyMetricField = 'sleepHours' | 'steps'
+
+/** 指定日の睡眠/歩数を 1 項目だけ更新する（行がなければ作る） */
+export async function upsertDailyMetric(field: DailyMetricField, value: number, date = todayKey()): Promise<void> {
+  // 睡眠と歩数は別々の入力から同じ日の行を取り合うので、読み→書きを 1 トランザクションに閉じて二重 add を防ぐ
+  await db.transaction('rw', db.dailyMetrics, async () => {
+    const existing = await db.dailyMetrics.where('date').equals(date).first()
+    const now = Date.now()
+    if (existing) {
+      await db.dailyMetrics.update(existing.id, { [field]: value, updatedAt: now })
+      return
+    }
+    const entry: DailyMetric = { id: newId(), date, [field]: value, createdAt: now, updatedAt: now }
+    await db.dailyMetrics.add(entry)
+  })
+}
+
+/** その項目が入っている最新の行（プリセット用） */
+export async function getLatestDailyMetric(field: DailyMetricField): Promise<DailyMetric | undefined> {
+  return db.dailyMetrics.orderBy('date').reverse().filter((m) => m[field] !== undefined).first()
 }
 
 export async function putWeeklyReview(review: WeeklyReview): Promise<void> {

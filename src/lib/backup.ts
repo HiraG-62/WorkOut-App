@@ -1,5 +1,5 @@
 import { db, DEFAULT_SETTINGS } from '../db/db'
-import type { CoachThread, Exercise, Food, MealEntry, MealSet, Routine, Settings, WeeklyReview, WeightEntry, Workout, WorkoutSet } from '../types'
+import type { CoachThread, DailyMetric, Exercise, Food, MealEntry, MealSet, Routine, Settings, WeeklyReview, WeightEntry, Workout, WorkoutSet } from '../types'
 
 const BACKUP_VERSION = 1
 
@@ -17,6 +17,8 @@ interface Backup {
   weeklyReviews?: WeeklyReview[]
   routines?: Routine[]
   coachThreads?: CoachThread[]
+  /** v1 のバックアップには無い */
+  dailyMetrics?: DailyMetric[]
   settings: Settings | undefined
 }
 
@@ -28,7 +30,7 @@ function isIos(): boolean {
 }
 
 export async function exportBackup(): Promise<string> {
-  const [exercises, workouts, sets, foods, meals, mealSets, weights, weeklyReviews, routines, coachThreads, settings] = await Promise.all([
+  const [exercises, workouts, sets, foods, meals, mealSets, weights, weeklyReviews, routines, coachThreads, dailyMetrics, settings] = await Promise.all([
     db.exercises.toArray(),
     db.workouts.toArray(),
     db.sets.toArray(),
@@ -39,6 +41,7 @@ export async function exportBackup(): Promise<string> {
     db.weeklyReviews.toArray(),
     db.routines.toArray(),
     db.coachThreads.toArray(),
+    db.dailyMetrics.toArray(),
     db.settings.get('app'),
   ])
   // APIキーはバックアップに含めない
@@ -56,6 +59,7 @@ export async function exportBackup(): Promise<string> {
     weeklyReviews,
     routines,
     coachThreads,
+    dailyMetrics,
     settings: safeSettings,
   }
   return JSON.stringify(backup)
@@ -110,6 +114,9 @@ function parseBackup(json: string): Backup {
   if (b.coachThreads !== undefined && !isRecordArray(b.coachThreads)) {
     throw new Error('データが壊れています: coachThreads')
   }
+  if (b.dailyMetrics !== undefined && !isRecordArray(b.dailyMetrics)) {
+    throw new Error('データが壊れています: dailyMetrics')
+  }
   // 各テーブルの中身は id を持つオブジェクト配列であることまで確認した上で、型は書き出し時のものを信頼する
   return b as unknown as Backup
 }
@@ -117,51 +124,58 @@ function parseBackup(json: string): Backup {
 /** 既存データを全て置き換える。端末に保存済みのAPIキーは維持する。設定を書き換えたかを返す */
 export async function importBackup(json: string): Promise<{ settingsRestored: boolean }> {
   const b = parseBackup(json)
-  // 体重は日付ユニーク。重複していたら後のものを残す
+  // 体重・日次コンディションは日付ユニーク。重複していたら後のものを残す
   b.weights = [...new Map(b.weights.map((w) => [w.date, w])).values()]
+  const dailyMetrics = [...new Map((b.dailyMetrics ?? []).map((m) => [m.date, m])).values()]
   const current = await db.settings.get('app')
-  await db.transaction('rw', [db.exercises, db.workouts, db.sets, db.foods, db.meals, db.mealSets, db.weights, db.weeklyReviews, db.routines, db.coachThreads, db.settings], async () => {
-    await Promise.all([
-      db.exercises.clear(),
-      db.workouts.clear(),
-      db.sets.clear(),
-      db.foods.clear(),
-      db.meals.clear(),
-      db.mealSets.clear(),
-      db.weights.clear(),
-      db.weeklyReviews.clear(),
-      db.routines.clear(),
-      db.coachThreads.clear(),
-    ])
-    await Promise.all([
-      db.exercises.bulkAdd(b.exercises),
-      db.workouts.bulkAdd(b.workouts),
-      db.sets.bulkAdd(b.sets),
-      db.foods.bulkAdd(b.foods),
-      db.meals.bulkAdd(b.meals),
-      db.mealSets.bulkAdd(b.mealSets),
-      db.weights.bulkAdd(b.weights),
-      db.weeklyReviews.bulkAdd(b.weeklyReviews ?? []),
-      db.routines.bulkAdd(b.routines ?? []),
-      db.coachThreads.bulkAdd(b.coachThreads ?? []),
-    ])
-    if (b.settings) {
-      // 古い/欠けたフィールドは既定値で補う
-      const merged: Settings = {
-        ...DEFAULT_SETTINGS,
-        ...b.settings,
-        id: 'app',
-        profile: { ...DEFAULT_SETTINGS.profile, ...b.settings.profile },
-        targets: { ...DEFAULT_SETTINGS.targets, ...b.settings.targets },
-        ai: {
-          ...DEFAULT_SETTINGS.ai,
-          ...b.settings.ai,
-          models: { ...DEFAULT_SETTINGS.ai.models, ...b.settings.ai?.models },
-          keys: current?.ai.keys ?? { ...EMPTY_KEYS },
-        },
+  await db.transaction(
+    'rw',
+    [db.exercises, db.workouts, db.sets, db.foods, db.meals, db.mealSets, db.weights, db.weeklyReviews, db.routines, db.coachThreads, db.dailyMetrics, db.settings],
+    async () => {
+      await Promise.all([
+        db.exercises.clear(),
+        db.workouts.clear(),
+        db.sets.clear(),
+        db.foods.clear(),
+        db.meals.clear(),
+        db.mealSets.clear(),
+        db.weights.clear(),
+        db.weeklyReviews.clear(),
+        db.routines.clear(),
+        db.coachThreads.clear(),
+        db.dailyMetrics.clear(),
+      ])
+      await Promise.all([
+        db.exercises.bulkAdd(b.exercises),
+        db.workouts.bulkAdd(b.workouts),
+        db.sets.bulkAdd(b.sets),
+        db.foods.bulkAdd(b.foods),
+        db.meals.bulkAdd(b.meals),
+        db.mealSets.bulkAdd(b.mealSets),
+        db.weights.bulkAdd(b.weights),
+        db.weeklyReviews.bulkAdd(b.weeklyReviews ?? []),
+        db.routines.bulkAdd(b.routines ?? []),
+        db.coachThreads.bulkAdd(b.coachThreads ?? []),
+        db.dailyMetrics.bulkAdd(dailyMetrics),
+      ])
+      if (b.settings) {
+        // 古い/欠けたフィールドは既定値で補う
+        const merged: Settings = {
+          ...DEFAULT_SETTINGS,
+          ...b.settings,
+          id: 'app',
+          profile: { ...DEFAULT_SETTINGS.profile, ...b.settings.profile },
+          targets: { ...DEFAULT_SETTINGS.targets, ...b.settings.targets },
+          ai: {
+            ...DEFAULT_SETTINGS.ai,
+            ...b.settings.ai,
+            models: { ...DEFAULT_SETTINGS.ai.models, ...b.settings.ai?.models },
+            keys: current?.ai.keys ?? { ...EMPTY_KEYS },
+          },
+        }
+        await db.settings.put(merged)
       }
-      await db.settings.put(merged)
-    }
-  })
+    },
+  )
   return { settingsRestored: !!b.settings }
 }

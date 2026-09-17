@@ -128,6 +128,14 @@ try {
   assert(wqStatus.includes('保存') || wqStatus.includes('今日'), `体重が自動保存される (${wqStatus})`)
   await shot('home-weight-saved')
 
+  // 2b. 睡眠と歩数も ± で自動保存
+  await clickLabel('睡眠を0.5h増やす')
+  await clickLabel('歩数を500歩増やす')
+  await sleep(900)
+  const dqStatuses = await page.$$eval('.dq__status', (els) => els.map((e) => e.textContent?.trim() ?? ''))
+  assert(dqStatuses.length === 2 && dqStatuses.every((s) => s.includes('保存') || s.includes('今日')), `睡眠・歩数が自動保存される (${dqStatuses.join(' / ')})`)
+  await shot('home-daily-saved')
+
   // 3. ワークアウト開始（種目を選ぶ）
   await clickText('トレ', { tag: 'a' })
   await sleep(400)
@@ -288,6 +296,8 @@ try {
   await clickText('記録', { tag: 'a' })
   await sleep(500)
   await shot('log')
+  const chartLabels = await page.$$eval('svg[role="img"]', (els) => els.map((e) => e.getAttribute('aria-label') ?? ''))
+  assert(chartLabels.some((l) => l.includes('睡眠')) && chartLabels.some((l) => l.includes('歩数')), '記録ページに睡眠・歩数のグラフが出る')
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await sleep(300)
   await shot('log-bottom')

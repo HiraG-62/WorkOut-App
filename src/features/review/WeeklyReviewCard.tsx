@@ -12,7 +12,7 @@ import { useBusy } from '../../hooks/useBusy'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
-import { AI_PROVIDERS, type Exercise, type MealEntry, type WeeklyReview, type WeightEntry, type Workout, type WorkoutSet } from '../../types'
+import { AI_PROVIDERS, type DailyMetric, type Exercise, type MealEntry, type WeeklyReview, type WeightEntry, type Workout, type WorkoutSet } from '../../types'
 import { useWeightKg } from '../workout/useDayBurn'
 import './WeeklyReviewCard.css'
 
@@ -25,6 +25,7 @@ interface WeeklyReviewCardProps {
   sets: WorkoutSet[]
   meals: MealEntry[]
   weights: WeightEntry[]
+  metrics: DailyMetric[]
   exercises: Map<string, Exercise>
 }
 
@@ -41,7 +42,7 @@ function weekLabel(weekStart: string, today: string): string {
 }
 
 /** 1週間のトレ・食事・体重の集計と、AI の一言 */
-export function WeeklyReviewCard({ today, workouts, sets, meals, weights, exercises }: WeeklyReviewCardProps) {
+export function WeeklyReviewCard({ today, workouts, sets, meals, weights, metrics, exercises }: WeeklyReviewCardProps) {
   const settings = useSettings()
   const weightKg = useWeightKg()
   const toast = useToast()
@@ -67,19 +68,24 @@ export function WeeklyReviewCard({ today, workouts, sets, meals, weights, exerci
   const isThisWeek = offsetWeeks === 0
   const review = useLiveQuery(async () => (await db.weeklyReviews.get(weekStart)) ?? null, [weekStart])
 
-  const base = useMemo(() => ({ today, workouts, sets, meals, weights, exercises, weightKg }), [today, workouts, sets, meals, weights, exercises, weightKg])
+  const base = useMemo(
+    () => ({ today, workouts, sets, meals, weights, metrics, exercises, weightKg }),
+    [today, workouts, sets, meals, weights, metrics, exercises, weightKg],
+  )
   const current = useMemo<WeekStats>(() => summarizeWeek({ ...base, weekStart }), [base, weekStart])
   const previous = useMemo<WeekStats | null>(() => {
     const p = summarizeWeek({ ...base, weekStart: prevStart })
-    return p.workoutDays === 0 && p.intake.days === 0 && p.weightAvg === null ? null : p
+    return p.workoutDays === 0 && p.intake.days === 0 && p.weightAvg === null && p.sleepAvg === null && p.stepsAvg === null ? null : p
   }, [base, prevStart])
 
-  const hasAny = current.workoutDays > 0 || current.intake.days > 0 || current.weightAvg !== null
+  const hasAny = current.workoutDays > 0 || current.intake.days > 0 || current.weightAvg !== null || current.sleepAvg !== null || current.stepsAvg !== null
   const aiReady = isAiConfigured(settings.ai)
   const providerLabel = AI_PROVIDERS[settings.ai.provider].label
   const kcalRate = achievementRate(current.intake.kcal, settings.targets.kcal)
   const proteinRate = achievementRate(current.intake.protein, settings.targets.protein)
   const weightDelta = current.weightAvg !== null && previous?.weightAvg != null ? Math.round((current.weightAvg - previous.weightAvg) * 10) / 10 : null
+  const sleepDelta = current.sleepAvg !== null && previous?.sleepAvg != null ? Math.round((current.sleepAvg - previous.sleepAvg) * 10) / 10 : null
+  const stepsDelta = current.stepsAvg !== null && previous?.stepsAvg != null ? current.stepsAvg - previous.stepsAvg : null
 
   const ask = () =>
     guard(async () => {
@@ -228,6 +234,42 @@ export function WeeklyReviewCard({ today, workouts, sets, meals, weights, exerci
                   <span className="wr__sub">
                     週平均
                     {weightDelta !== null && <span className="wr__delta"> {signed(weightDelta, 'kg')}</span>}
+                  </span>
+                </>
+              )}
+            </dd>
+          </div>
+          <div className="wr__stat">
+            <dt>睡眠</dt>
+            <dd>
+              {current.sleepAvg === null ? (
+                <span className="wr__sub">記録なし</span>
+              ) : (
+                <>
+                  <span className="wr__value">
+                    <span className="display wr__big">{current.sleepAvg}</span>h
+                  </span>
+                  <span className="wr__sub">
+                    週平均
+                    {sleepDelta !== null && <span className="wr__delta"> {signed(sleepDelta, 'h')}</span>}
+                  </span>
+                </>
+              )}
+            </dd>
+          </div>
+          <div className="wr__stat">
+            <dt>歩数</dt>
+            <dd>
+              {current.stepsAvg === null ? (
+                <span className="wr__sub">記録なし</span>
+              ) : (
+                <>
+                  <span className="wr__value">
+                    <span className="display wr__big wr__big--sm">{current.stepsAvg.toLocaleString('ja-JP')}</span>歩
+                  </span>
+                  <span className="wr__sub">
+                    週平均
+                    {stepsDelta !== null && <span className="wr__delta"> {signed(stepsDelta, '歩')}</span>}
                   </span>
                 </>
               )}

@@ -13,6 +13,7 @@ import { Card, Section } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { NutritionSummary } from '../components/NutritionSummary'
 import { WeightQuick } from '../features/weight/WeightQuick'
+import { DailyQuick } from '../features/daily/DailyQuick'
 import { useDayMeals } from '../features/meals/useDayMeals'
 import { useFoods } from '../features/meals/useFoods'
 import { QuickFoods } from '../features/meals/QuickFoods'
@@ -97,6 +98,7 @@ export function HomePage() {
       )}
 
       <WeightQuick compact />
+      <DailyQuick />
 
       <Section title="トレーニング">
         {!ready ? (

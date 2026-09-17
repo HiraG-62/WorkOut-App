@@ -151,6 +151,19 @@ export interface WeightEntry {
   createdAt: number
 }
 
+/** 睡眠・歩数などの日次コンディション（1日1行。未入力の項目は undefined） */
+export interface DailyMetric {
+  id: string
+  /** YYYY-MM-DD */
+  date: string
+  /** 睡眠時間（h、0.5 刻みだが直接入力で 0.1 刻みも可） */
+  sleepHours?: number
+  /** 歩数 */
+  steps?: number
+  createdAt: number
+  updatedAt: number
+}
+
 export const SEX = { male: '男性', female: '女性' } as const
 export type Sex = keyof typeof SEX
 

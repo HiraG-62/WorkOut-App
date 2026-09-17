@@ -1,4 +1,4 @@
-import type { Exercise, MealEntry, Targets, WeightEntry, Workout, WorkoutSet } from '../types'
+import type { DailyMetric, Exercise, MealEntry, Targets, WeightEntry, Workout, WorkoutSet } from '../types'
 import { addDays, fromDateKey, toDateKey } from './date'
 import { estimateBurnKcal } from './calories'
 import { sumNutrition } from './nutrition'
@@ -40,6 +40,10 @@ export interface WeekStats {
   intake: MacroAverage
   /** 週平均体重（記録があれば） */
   weightAvg: number | null
+  /** 週平均睡眠時間（記録があれば、小数1桁） */
+  sleepAvg: number | null
+  /** 週平均歩数（記録があれば、整数） */
+  stepsAvg: number | null
   /** 集計対象の日数（週の初日から今日まで）。AI に「何日分の集計か」を伝える */
   elapsedDays: number
 }
@@ -51,6 +55,7 @@ interface WeekInput {
   sets: WorkoutSet[]
   meals: MealEntry[]
   weights: WeightEntry[]
+  metrics: DailyMetric[]
   exercises: Map<string, Exercise>
   /** 最新の体重。その週の平均体重があればそちらを優先する */
   weightKg: number
@@ -62,7 +67,7 @@ function avg(values: number[]): number | null {
 }
 
 /** 1週間分の集計。未来の日は含めない */
-export function summarizeWeek({ weekStart, today, workouts, sets, meals, weights, exercises, weightKg }: WeekInput): WeekStats {
+export function summarizeWeek({ weekStart, today, workouts, sets, meals, weights, metrics, exercises, weightKg }: WeekInput): WeekStats {
   const days = weekDays(weekStart)
   const weekEnd = days[days.length - 1]
   const inWeek = new Set(days.filter((d) => d <= today))
@@ -70,6 +75,9 @@ export function summarizeWeek({ weekStart, today, workouts, sets, meals, weights
   const workoutIds = new Set(weekWorkouts.map((w) => w.id))
   const weekSets = sets.filter((s) => workoutIds.has(s.workoutId))
   const weightAvg = avg(weights.filter((w) => inWeek.has(w.date)).map((w) => w.kg))
+  const weekMetrics = metrics.filter((m) => inWeek.has(m.date))
+  const sleepAvg = avg(weekMetrics.map((m) => m.sleepHours).filter((v): v is number => v !== undefined))
+  const stepsAvg = avg(weekMetrics.map((m) => m.steps).filter((v): v is number => v !== undefined))
   // 進行中（endedAt なし）は now を開始時刻にして「セット数 × 最低時間」の下限で見積もる（レンダー時刻に依存させない）
   const burnKcal = weekWorkouts.reduce(
     (acc, w) =>
@@ -99,6 +107,8 @@ export function summarizeWeek({ weekStart, today, workouts, sets, meals, weights
     burnKcal,
     intake,
     weightAvg: weightAvg === null ? null : Math.round(weightAvg * 10) / 10,
+    sleepAvg: sleepAvg === null ? null : Math.round(sleepAvg * 10) / 10,
+    stepsAvg: stepsAvg === null ? null : Math.round(stepsAvg),
     elapsedDays: inWeek.size,
   }
 }

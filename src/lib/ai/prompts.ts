@@ -126,6 +126,7 @@ export const WEEKLY_SYSTEM_PROMPT = `あなたは自宅で自重トレーニン�
 - 体重は日々の変動が大きいので、週平均どうしの比較で判断する
 - 記録が少ない週は、記録を続けること自体を来週の目標にしてよい
 - 目標値の変更は、体重の推移が目的（減量/維持/増量）と明らかに合っていない場合だけ提案する。変更する場合も一度に kcal で ±200 以内、タンパク質は体重×1.6〜2.2g の範囲
+- 睡眠が短い週（平均 6 時間未満）や歩数が極端に少ない週は、トレの量より回復・活動量の確保を優先して助言する
 - 専門用語を避け、口語で親しみやすく。出力はすべて日本語`
 
 function statsLines(label: string, s: WeekStats): string[] {
@@ -135,6 +136,7 @@ function statsLines(label: string, s: WeekStats): string[] {
     `トレ: ${s.workoutDays}日 / ${s.totalSets}セット / ${s.totalReps}回 + ${s.totalSeconds}秒 / 推定消費 約${s.burnKcal}kcal`,
     `食事: ${intake}`,
     `体重: ${s.weightAvg === null ? '記録なし' : `週平均 ${s.weightAvg}kg`}`,
+    `睡眠: ${s.sleepAvg === null ? '記録なし' : `週平均 ${s.sleepAvg}h`} / 歩数: ${s.stepsAvg === null ? '記録なし' : `週平均 ${s.stepsAvg}歩`}`,
   ]
 }
 
@@ -263,6 +265,7 @@ export const COACH_SYSTEM_PROMPT = `あなたは自宅で自重トレーニン�
 - トレーニングの提案は、器具なしで家でできる自重種目に限る。今の部位別セット数の偏りを埋めるように組む
 - 消費カロリーは目安（誤差 ±30%）として扱い、それだけを根拠に食事量を決めさせない
 - 記録が少ないときは、推測を断定にするより、まず何を記録すればよいかを advice に含める
+- 睡眠が短い日が続いている、歩数が少ない、といったコンディションの情報があれば、食事やトレの提案に反映する
 - 専門用語を避け、口語で親しみやすく。出力はすべて日本語`
 
 const COACH_ROLE_LABEL = { user: 'ユーザー', coach: 'コーチ' } as const

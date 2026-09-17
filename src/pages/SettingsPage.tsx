@@ -204,8 +204,8 @@ function SettingsForm({ initial, onImported }: SettingsFormProps) {
           <Toggle
             checked={initial.addBurnToTarget}
             onChange={(addBurnToTarget) => void updateSettings({ addBurnToTarget })}
-            label="トレの消費カロリーを目標に加算"
-            description="MET×体重×時間で見積もった目安です。ONにすると、トレした日はその分だけ食べてよい計算になります。減量中はOFF推奨"
+            label="筋トレの消費カロリーを目標に加算"
+            description="MET×体重×時間で見積もった目安です。ONにすると、筋トレした日はその分だけ食べてよい計算になります。減量中はOFF推奨"
           />
         </Card>
       </Section>

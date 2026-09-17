@@ -41,7 +41,7 @@ function weekLabel(weekStart: string, today: string): string {
   return `${formatMonthDay(weekStart)}の週`
 }
 
-/** 1週間のトレ・食事・体重の集計と、AI の一言 */
+/** 1週間の筋トレ・食事・体重の集計と、AI の一言 */
 export function WeeklyReviewCard({ today, workouts, sets, meals, weights, metrics, exercises }: WeeklyReviewCardProps) {
   const settings = useSettings()
   const weightKg = useWeightKg()
@@ -184,7 +184,7 @@ export function WeeklyReviewCard({ today, workouts, sets, meals, weights, metric
       ) : (
         <dl className="wr__stats">
           <div className="wr__stat">
-            <dt>トレ</dt>
+            <dt>筋トレ</dt>
             <dd>
               <span className="wr__value">
                 <span className="display wr__big">{current.workoutDays}</span>日

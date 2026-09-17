@@ -173,7 +173,7 @@ export function HomePage() {
 
       <Section title="AI コーチ">
         <Card className="hp__coach">
-          <p className="hp__coach-lead">今の食事とトレを見て、簡単にできる改善を提案します</p>
+          <p className="hp__coach-lead">今の食事と筋トレを見て、簡単にできる改善を提案します</p>
           {aiReady && lastThread && (
             <button
               type="button"

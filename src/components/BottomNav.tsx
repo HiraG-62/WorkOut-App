@@ -4,7 +4,7 @@ import './BottomNav.css'
 
 const ITEMS = [
   { to: '/', label: 'ホーム', Icon: Home, end: true },
-  { to: '/workout', label: 'トレ', Icon: Dumbbell, end: false },
+  { to: '/workout', label: '筋トレ', Icon: Dumbbell, end: false },
   { to: '/meals', label: '食事', Icon: UtensilsCrossed, end: false },
   { to: '/log', label: '記録', Icon: LineChart, end: false },
 ] as const

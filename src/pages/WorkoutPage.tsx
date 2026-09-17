@@ -159,7 +159,7 @@ export function WorkoutPage() {
       </Section>
       )}
 
-      <CoachSheet open={coachOpen} onClose={() => setCoachOpen(false)} date={today} initialQuestion="今のトレの状況に合うメニューを提案して" />
+      <CoachSheet open={coachOpen} onClose={() => setCoachOpen(false)} date={today} initialQuestion="今の筋トレの状況に合うメニューを提案して" />
 
       <ExercisePickerSheet open={pickerOpen} onClose={closePicker} exercises={exerciseList} selectedIds={[]} recentIds={recentIds} onConfirm={(ids) => void startWith(ids)} confirmLabel="選んで開始" />
     </div>

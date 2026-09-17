@@ -46,7 +46,7 @@ const MAX_MEAL_IDEAS = 4
 const MAX_FOLLOW_UPS = 3
 const MAX_WORKOUT_ITEMS = 12
 /** 新規スレッドで出す定型の相談 */
-const STARTERS = ['簡単でバランスの良い献立', 'タンパク質をもっと取りたい', '今のトレ頻度は適切？', '停滞を抜けたい'] as const
+const STARTERS = ['簡単でバランスの良い献立', 'タンパク質をもっと取りたい', '今の筋トレ頻度は適切？', '停滞を抜けたい'] as const
 
 interface CoachSheetProps {
   open: boolean
@@ -383,7 +383,7 @@ export function CoachSheet({ open, onClose, threadId = null, date, initialQuesti
     <div className="co__workout">
       <p className="co__idea-head">
         <Dumbbell size={14} aria-hidden />
-        トレメニューの提案
+        筋トレメニューの提案
       </p>
       <p className="co__idea-name">{idea.name || DEFAULT_ROUTINE_NAME}</p>
       <ul className="co__items">
@@ -454,7 +454,7 @@ export function CoachSheet({ open, onClose, threadId = null, date, initialQuesti
               e.preventDefault()
               void send(input)
             }}
-            placeholder="食事やトレのことを相談する"
+            placeholder="食事や筋トレのことを相談する"
             enterKeyHint="send"
             aria-label="相談を入力"
             disabled={busy}
@@ -468,7 +468,7 @@ export function CoachSheet({ open, onClose, threadId = null, date, initialQuesti
       }
     >
       <div className="co__top">
-        <p className="faint co__provider">{providerLabel} が、記録した食事とトレを見て答えます</p>
+        <p className="faint co__provider">{providerLabel} が、記録した食事と筋トレを見て答えます</p>
         <button type="button" className="co__history-btn" onClick={() => setHistoryOpen(true)} aria-label="過去の相談">
           <History size={20} aria-hidden />
         </button>

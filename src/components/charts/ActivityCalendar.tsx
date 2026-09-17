@@ -69,7 +69,7 @@ export function ActivityCalendar({ workoutDays, mealDays, today }: ActivityCalen
         </div>
       </div>
       <div className="acal__legend">
-        <span className="acal__cell acal__cell--workout" /> トレ
+        <span className="acal__cell acal__cell--workout" /> 筋トレ
         <span className="acal__cell acal__cell--meal" /> 食事
         <span className="acal__cell acal__cell--both" /> 両方
       </div>

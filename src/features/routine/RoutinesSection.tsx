@@ -26,7 +26,7 @@ interface RoutinesSectionProps {
 
 type SheetKind = 'new' | 'edit' | 'import' | null
 
-/** トレ画面のセットメニュー一覧（開始 / 作成 / 編集 / YouTube 取り込み） */
+/** 筋トレ画面のセットメニュー一覧（開始 / 作成 / 編集 / YouTube 取り込み） */
 export function RoutinesSection({ exercises, canStart }: RoutinesSectionProps) {
   const navigate = useNavigate()
   const settings = useSettings()

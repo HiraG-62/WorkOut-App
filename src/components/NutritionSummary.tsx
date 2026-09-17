@@ -39,7 +39,7 @@ export function NutritionSummary({ totals, targets, compact = false, burnKcal = 
           <p className="nutri__burn">
             <Flame size={13} aria-hidden />
             <span className="nutri__burn-text">
-              トレで約<span className="num">{burnKcal}</span>kcal 消費
+              筋トレで約<span className="num">{burnKcal}</span>kcal 消費
             </span>
             {addBurn && <span className="nutri__burn-tag">目標 {kcalTarget}kcal に加算中</span>}
             {weightMissing && <span className="nutri__burn-note">体重を記録すると正確になります</span>}

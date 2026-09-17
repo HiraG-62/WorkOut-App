@@ -60,7 +60,7 @@ export interface AiClient {
   classifyExercise(req: ExerciseClassifyRequest, signal?: AbortSignal): Promise<ExerciseClassification>
   /** 筋トレ動画の URL（＋タイトル・説明欄）からメニューを読み取る */
   parseWorkoutVideo(req: VideoWorkoutRequest, signal?: AbortSignal): Promise<ParsedWorkoutResult>
-  /** 実データを踏まえて食事・トレの相談に答える */
+  /** 実データを踏まえて食事・トレーニングの相談に答える */
   askCoach(req: CoachRequest, signal?: AbortSignal): Promise<CoachAnswer>
 }
 

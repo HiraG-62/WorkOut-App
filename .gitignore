@@ -25,3 +25,6 @@ dist-ssr
 
 # e2e screenshots
 e2e-shots
+
+# Claude Code (ローカル専用の開発ルール)
+CLAUDE.md

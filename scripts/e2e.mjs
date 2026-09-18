@@ -1,13 +1,25 @@
 // 開発サーバーに対してスマホ相当の画面で主要フローを操作し、スクリーンショットとコンソールエラーを収集する
 // 使い方: node scripts/e2e.mjs [baseUrl] [outDir]
 import puppeteer from 'puppeteer-core'
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const BASE = process.argv[2] ?? 'http://localhost:5199/'
 const OUT = process.argv[3] ?? 'e2e-shots'
 const CHROME = process.env.CHROME_PATH ?? (process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : '/usr/bin/google-chrome')
 const VIEWPORT = { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
+/** 要素・トーストが現れるまでの待ち時間 */
+const WAIT_TIMEOUT_MS = 4000
+/** バックアップのダウンロード完了までの待ち時間 */
+const DOWNLOAD_TIMEOUT_MS = 8000
+/** 設定画面に入れるダミーの API キー（通信はしない）。バックアップに漏れていないかの確認にも使う */
+const DUMMY_API_KEY_CLAUDE = 'sk-dummy-for-e2e'
+const DUMMY_API_KEY_OPENAI = 'sk-dummy-openai'
+/** バックアップ復元の確認で、いったん空にするテーブル */
+const CLEARED_TABLES = ['sets', 'meals', 'weights', 'dailyMetrics']
+/** IndexedDB にはあるがバックアップ JSON では配列として出ないテーブル（settings は単一オブジェクト） */
+const NOT_ARRAY_IN_BACKUP = ['settings']
 
 mkdirSync(OUT, { recursive: true })
 
@@ -38,7 +50,7 @@ async function shot(name) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 /** テキストを含むボタンをクリックする */
-async function clickText(text, { tag = 'button', index = 0, timeout = 4000, exact = false } = {}) {
+async function clickText(text, { tag = 'button', index = 0, timeout = WAIT_TIMEOUT_MS, exact = false } = {}) {
   const deadline = Date.now() + timeout
   while (Date.now() < deadline) {
     const ok = await page.evaluate(
@@ -75,7 +87,7 @@ async function pickExercise(name) {
   if (!ok) throw new Error(`exercise not found: ${name}`)
 }
 
-async function clickLabel(label, { timeout = 4000 } = {}) {
+async function clickLabel(label, { timeout = WAIT_TIMEOUT_MS } = {}) {
   const deadline = Date.now() + timeout
   while (Date.now() < deadline) {
     const ok = await page.evaluate((l) => {
@@ -98,7 +110,7 @@ async function clickLabel(label, { timeout = 4000 } = {}) {
 }
 
 async function typeInto(selector, value) {
-  await page.waitForSelector(selector, { timeout: 4000 })
+  await page.waitForSelector(selector, { timeout: WAIT_TIMEOUT_MS })
   await page.click(selector, { clickCount: 3 })
   await page.type(selector, value)
 }
@@ -110,6 +122,114 @@ async function textOf(selector) {
 function assert(cond, msg) {
   if (!cond) throw new Error(`ASSERT: ${msg}`)
   console.log('ok  ', msg)
+}
+
+/** バックアップのダウンロード先（一時ディレクトリ。終了時に消す） */
+let downloadDir = null
+
+/** IndexedDB の全テーブルの件数（アプリの JS を通さず直接読む） */
+async function dbCounts() {
+  return page.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        const req = indexedDB.open('workout-app')
+        req.onsuccess = () => {
+          const dbx = req.result
+          const names = [...dbx.objectStoreNames].sort()
+          if (names.length === 0) {
+            dbx.close()
+            resolve({})
+            return
+          }
+          const tx = dbx.transaction(names, 'readonly')
+          const counts = {}
+          let pending = names.length
+          for (const name of names) {
+            const c = tx.objectStore(name).count()
+            c.onsuccess = () => {
+              counts[name] = c.result
+              pending -= 1
+              if (pending === 0) {
+                dbx.close()
+                resolve(counts)
+              }
+            }
+            c.onerror = () => reject(c.error)
+          }
+        }
+        req.onerror = () => reject(req.error)
+      }),
+  )
+}
+
+/** 指定テーブルを空にする（復元で戻ることを確かめる前準備） */
+async function clearStores(names) {
+  await page.evaluate(
+    (targets) =>
+      new Promise((resolve, reject) => {
+        const req = indexedDB.open('workout-app')
+        req.onsuccess = () => {
+          const dbx = req.result
+          const tx = dbx.transaction(targets, 'readwrite')
+          for (const name of targets) tx.objectStore(name).clear()
+          tx.oncomplete = () => {
+            dbx.close()
+            resolve()
+          }
+          tx.onerror = () => reject(tx.error)
+          tx.onabort = () => reject(tx.error ?? new Error('transaction aborted'))
+        }
+        req.onerror = () => reject(req.error)
+      }),
+    names,
+  )
+}
+
+/** 設定行をそのまま読む */
+async function readSettings() {
+  return page.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        const req = indexedDB.open('workout-app')
+        req.onsuccess = () => {
+          const dbx = req.result
+          const get = dbx.transaction('settings', 'readonly').objectStore('settings').get('app')
+          get.onsuccess = () => {
+            dbx.close()
+            resolve(get.result)
+          }
+          get.onerror = () => reject(get.error)
+        }
+        req.onerror = () => reject(req.error)
+      }),
+  )
+}
+
+/** ダウンロード先に .json が現れるまで待つ（Chrome は .crdownload で書いてから改名する） */
+async function waitForDownload(dir, { timeout = DOWNLOAD_TIMEOUT_MS } = {}) {
+  const deadline = Date.now() + timeout
+  while (Date.now() < deadline) {
+    const found = readdirSync(dir).find((f) => f.endsWith('.json'))
+    if (found) return join(dir, found)
+    await sleep(100)
+  }
+  throw new Error(`download not found in ${dir}`)
+}
+
+/** スタブした navigator.share が呼ばれるまで待ち、渡されたファイルの名前と種類を返す */
+async function waitForShare({ timeout = WAIT_TIMEOUT_MS } = {}) {
+  try {
+    // 未初期化（undefined）を「呼ばれた」と読まないよう、オブジェクトが入ったことを見る
+    await page.waitForFunction(() => typeof window.__sharedFile === 'object' && window.__sharedFile !== null, { timeout })
+  } catch {
+    throw new Error('ASSERT: 共有シートが呼ばれる')
+  }
+  return page.evaluate(() => window.__sharedFile)
+}
+
+/** トーストに指定の文言が出るまで待つ */
+async function waitForToast(message, { timeout = WAIT_TIMEOUT_MS } = {}) {
+  await page.waitForFunction((m) => [...document.querySelectorAll('.toast__msg')].some((e) => e.textContent === m), { timeout }, message)
 }
 
 try {
@@ -329,7 +449,7 @@ try {
   // 8b. AIキーを設定すると「写真」「AIに話す」が出て、話すシートに入力欄がある（通信はしない）
   await page.goto(`${BASE}#/settings`, { waitUntil: 'networkidle0' })
   await sleep(400)
-  await typeInto('input[type="password"]', 'sk-dummy-for-e2e')
+  await typeInto('input[type="password"]', DUMMY_API_KEY_CLAUDE)
   await sleep(700)
   await page.goto(`${BASE}#/meals`, { waitUntil: 'networkidle0' })
   await sleep(400)
@@ -348,7 +468,7 @@ try {
   await sleep(400)
   await clickText('ChatGPT')
   await sleep(200)
-  await typeInto('input[type="password"]', 'sk-dummy-openai')
+  await typeInto('input[type="password"]', DUMMY_API_KEY_OPENAI)
   await sleep(700)
   await page.setRequestInterception(true)
   const mockEstimate = {
@@ -788,6 +908,90 @@ try {
   const names = await page.$$eval('.xb__name', (els) => els.map((e) => e.textContent))
   assert(names.includes('ブルガリアンスクワット'), `進化先に切り替わる (${names.join(',')})`)
   await shot('session-progressed')
+
+  // 11. バックアップ: 書き出し → 一部のテーブルを消す → 復元 → 全テーブルの件数が戻る。
+  //     API キーはファイルに入らず、復元後も端末に保存した値が残る。形式が違うファイルは拒否してデータを変えない
+  downloadDir = mkdtempSync(join(tmpdir(), 'workout-e2e-'))
+  const cdp = await page.createCDPSession()
+  await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDir })
+  await page.goto(`${BASE}#/settings`, { waitUntil: 'networkidle0' })
+  await sleep(400)
+  // iPhone UA なので共有シートを試みる。ヘッドレスでは開けないので download にフォールバックさせる
+  await page.evaluate(() => {
+    navigator.canShare = () => false
+  })
+  const countsBefore = await dbCounts()
+  const settingsBefore = await readSettings()
+  assert(Object.values(settingsBefore.ai.keys).some((k) => k), '書き出し前に API キーが端末に保存されている')
+  await clickText('バックアップを書き出す')
+  const backupFile = await waitForDownload(downloadDir)
+  const backupJson = readFileSync(backupFile, 'utf-8')
+  assert(!backupJson.includes(DUMMY_API_KEY_CLAUDE) && !backupJson.includes(DUMMY_API_KEY_OPENAI), 'バックアップに API キーが含まれない')
+  const backup = JSON.parse(backupJson)
+  assert(backup.version === 1 && typeof backup.exportedAt === 'string', `バックアップの形式 (version ${backup.version})`)
+  for (const [table, n] of Object.entries(countsBefore)) {
+    if (NOT_ARRAY_IN_BACKUP.includes(table)) continue
+    assert(Array.isArray(backup[table]) && backup[table].length === n, `バックアップに ${table} が ${n} 件入る (${backup[table]?.length})`)
+  }
+  assert(backup.settings?.addBurnToTarget === true, 'バックアップに設定が入る（加算 ON の状態）')
+  assert(Object.values(backup.settings.ai.keys).every((k) => k === ''), 'バックアップの設定の API キーが空')
+
+  // 消す前に記録があることを確かめておく（元々 0 件だと復元が壊れていても気づけない）
+  for (const t of CLEARED_TABLES) assert(countsBefore[t] > 0, `復元テストの前提: ${t} に記録がある (${countsBefore[t]})`)
+  await clearStores(CLEARED_TABLES)
+  const countsCleared = await dbCounts()
+  for (const t of CLEARED_TABLES) assert(countsCleared[t] === 0, `復元テストのために ${t} を消した`)
+  const fileInput = await page.$('input[aria-label="バックアップファイル"]')
+  assert(fileInput, '復元用のファイル入力がある')
+  await fileInput.uploadFile(backupFile)
+  await waitForToast('復元しました')
+  await shot('backup-restored')
+  const countsAfter = await dbCounts()
+  assert(JSON.stringify(countsAfter) === JSON.stringify(countsBefore), `復元後の件数が書き出し時と一致 (${JSON.stringify(countsAfter)})`)
+  const settingsAfter = await readSettings()
+  assert(JSON.stringify(settingsAfter.ai.keys) === JSON.stringify(settingsBefore.ai.keys), '復元後も端末の API キーが残る')
+  assert(settingsAfter.addBurnToTarget === true && settingsAfter.defaultRestSec === settingsBefore.defaultRestSec, '復元後の設定が書き出し時と一致')
+
+  // 復元後は設定フォームが key で作り直される。古い input が外れるのを待ってから取り直す
+  await page.waitForFunction((el) => !el.isConnected, { timeout: WAIT_TIMEOUT_MS }, fileInput)
+  const fileInputAfter = await page.$('input[aria-label="バックアップファイル"]')
+  assert(fileInputAfter, '復元後もファイル入力がある')
+  // 形式が違うファイル: version が違う JSON と、JSON ですらないファイル。どちらも日本語で断り、データを変えない
+  const badVersionFile = join(downloadDir, 'bad-version.json')
+  writeFileSync(badVersionFile, JSON.stringify({ version: 99, exercises: [] }))
+  await fileInputAfter.uploadFile(badVersionFile)
+  await waitForToast('対応していないバックアップ形式です')
+  const notJsonFile = join(downloadDir, 'not-json.json')
+  writeFileSync(notJsonFile, 'これは JSON ではありません')
+  await fileInputAfter.uploadFile(notJsonFile)
+  await waitForToast('バックアップファイルとして読み込めません')
+  const countsAfterBad = await dbCounts()
+  assert(JSON.stringify(countsAfterBad) === JSON.stringify(countsBefore), '形式が違うファイルではデータが変わらない')
+
+  // iOS で共有シートが使える環境では share にファイルを渡し、download には落ちない。
+  // ここで canShare / share を差し替えるので、このステップの後にバックアップを書き出す手順を足すときは元に戻すこと
+  await page.evaluate(() => {
+    window.__sharedFile = null
+    window.__origCanShare = navigator.canShare
+    window.__origShare = navigator.share
+    navigator.canShare = () => true
+    navigator.share = async (data) => {
+      window.__sharedFile = { name: data.files?.[0]?.name ?? '', type: data.files?.[0]?.type ?? '' }
+    }
+  })
+  // .crdownload の段階でも件数に出るよう、拡張子で絞らず全ファイルを数える
+  const filesBeforeShare = readdirSync(downloadDir).length
+  await clickText('バックアップを書き出す')
+  const shared = await waitForShare()
+  assert(/^workout-backup-\d{4}-\d{2}-\d{2}\.json$/.test(shared.name) && shared.type === 'application/json', `共有シートにバックアップファイルが渡る (${shared.name})`)
+  await sleep(300)
+  assert(readdirSync(downloadDir).length === filesBeforeShare, '共有できるときは download に落ちない')
+  // 戻すのはこのステップ冒頭の canShare スタブと、元の share（Linux の Chrome には無いので、その場合はプロパティごと消す）
+  await page.evaluate(() => {
+    navigator.canShare = window.__origCanShare
+    if (window.__origShare) navigator.share = window.__origShare
+    else delete navigator.share
+  })
 } catch (e) {
   console.error('FAILED:', e.message)
   await shot('failure')
@@ -798,4 +1002,5 @@ try {
   for (const e of filtered) console.log(e)
   if (filtered.length === 0) console.log('(none)')
   await browser.close()
+  if (downloadDir) rmSync(downloadDir, { recursive: true, force: true })
 }

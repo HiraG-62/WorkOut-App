@@ -17,7 +17,7 @@ import {
 import { createAiClient, AiError } from '../../lib/ai'
 import { buildCoachContext, COACH_DAYS, COACH_WEIGHT_DAYS } from '../../lib/coachContext'
 import { FALLBACK_WEIGHT_KG } from '../../lib/calories'
-import { addDays, formatMonthDay, formatRelative, toDateKey } from '../../lib/date'
+import { addDays, formatMonthDay, formatRelative, recordDateKey } from '../../lib/date'
 import { fmt1 } from '../../lib/nutrition'
 import { newId } from '../../lib/id'
 import { useSettings } from '../../hooks/useSettings'
@@ -537,7 +537,7 @@ export function CoachSheet({ open, onClose, threadId = null, date, initialQuesti
                 <button type="button" className="co__thread-body" onClick={() => openThread(t.id)}>
                   <span className="co__thread-title">{t.title}</span>
                   <span className="co__thread-meta">
-                    {AI_PROVIDERS[t.provider].label} · {formatRelative(toDateKey(new Date(t.updatedAt)))} · {t.turns.filter((x) => x.role === 'user').length}往復
+                    {AI_PROVIDERS[t.provider].label} · {formatRelative(recordDateKey(t.updatedAt))} · {t.turns.filter((x) => x.role === 'user').length}往復
                   </span>
                 </button>
                 <button type="button" className="co__thread-del" onClick={() => void removeThread(t)} aria-label={`${t.title} を消す`}>

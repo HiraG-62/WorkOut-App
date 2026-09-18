@@ -750,7 +750,8 @@ try {
         const getAll = store.getAll()
         getAll.onsuccess = () => {
           for (const w of getAll.result) {
-            const d = new Date()
+            // アプリの記録日は 4 時切り替わりなので、4 時間戻してから前日にする
+            const d = new Date(Date.now() - 4 * 3600000)
             d.setDate(d.getDate() - 1)
             w.date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
             w.startedAt -= 86400000

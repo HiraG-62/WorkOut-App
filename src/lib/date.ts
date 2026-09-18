@@ -1,4 +1,7 @@
 const MS_PER_DAY = 86_400_000
+const MS_PER_HOUR = 3_600_000
+/** 1 日の切り替わり時刻。深夜の記録は前日扱いにする */
+export const DAY_START_HOUR = 4
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'] as const
 
 function pad(n: number): string {
@@ -10,8 +13,24 @@ export function toDateKey(d: Date = new Date()): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+/**
+ * 記録日の日付キー。DAY_START_HOUR 時より前はまだ前日として扱う
+ * （例: 9/17 2:30 の記録は 9/16 に入る）
+ */
+export function recordDateKey(at: number | Date = Date.now()): string {
+  const ts = typeof at === 'number' ? at : at.getTime()
+  return toDateKey(new Date(ts - DAY_START_HOUR * MS_PER_HOUR))
+}
+
 export function todayKey(): string {
-  return toDateKey(new Date())
+  return recordDateKey()
+}
+
+/** 次に日付が切り替わる時刻（DAY_START_HOUR 時）までのミリ秒 */
+export function msUntilNextDayStart(now: Date = new Date()): number {
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), DAY_START_HOUR, 0, 1)
+  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1)
+  return next.getTime() - now.getTime()
 }
 
 export function fromDateKey(key: string): Date {

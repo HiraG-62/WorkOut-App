@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { HashRouter, Route, Routes, Outlet } from 'react-router-dom'
 import { BottomNav } from './components/BottomNav'
 import { RestTimerBar } from './components/RestTimerBar'
@@ -10,11 +10,13 @@ import { MealsPage } from './pages/MealsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { WorkoutPage } from './pages/WorkoutPage'
 import { WorkoutSessionPage } from './pages/WorkoutSessionPage'
-import { FiguresDevPage } from './pages/FiguresDevPage'
 import { ScrollToTop } from './components/ScrollToTop'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { UpdateBanner } from './components/UpdateBanner'
 import { useRestTimer } from './hooks/useRestTimer'
+
+/** 開発用ページ（フォーム図の一覧、#/dev/figures）。dev サーバーでだけ読み込み、本番ビルドには含めない */
+const FiguresDevPage = import.meta.env.DEV ? lazy(() => import('./pages/FiguresDevPage').then((m) => ({ default: m.FiguresDevPage }))) : null
 
 function Shell() {
   const timer = useRestTimer()
@@ -49,7 +51,16 @@ export function App() {
               <Route path="/meals" element={<MealsPage />} />
               <Route path="/log" element={<LogPage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/dev/figures" element={<FiguresDevPage />} />
+              {FiguresDevPage && (
+                <Route
+                  path="/dev/figures"
+                  element={
+                    <Suspense fallback={null}>
+                      <FiguresDevPage />
+                    </Suspense>
+                  }
+                />
+              )}
               <Route path="*" element={<HomePage />} />
             </Route>
           </Routes>

@@ -198,12 +198,25 @@ function weightLine({ weights }: CoachContextInput): string {
 function conditionLine({ metrics }: CoachContextInput): string {
   const head = `【睡眠・歩数・直近${COACH_DAYS}日】`
   const sleepValues = metrics.map((m) => m.sleepHours).filter((v): v is number => v !== undefined)
+  const scoreValues = metrics.map((m) => m.sleepScore).filter((v): v is number => v !== undefined)
   const stepsValues = metrics.map((m) => m.steps).filter((v): v is number => v !== undefined)
-  if (sleepValues.length === 0 && stepsValues.length === 0) return `${head}${NONE}`
+  if (sleepValues.length === 0 && scoreValues.length === 0 && stepsValues.length === 0) return `${head}${NONE}`
   const parts: string[] = []
   if (sleepValues.length > 0) {
     const sleepAvg = Math.round((sleepValues.reduce((a, b) => a + b, 0) / sleepValues.length) * 10) / 10
-    parts.push(`睡眠 平均${sleepAvg}h（記録${sleepValues.length}日）`)
+    // スコアの記録日数が睡眠時間と同じならまとめ、違えば別に書く
+    const scoreNote =
+      scoreValues.length === 0
+        ? ''
+        : scoreValues.length === sleepValues.length
+          ? `・スコア平均${r0(scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length)}`
+          : ''
+    parts.push(`睡眠 平均${sleepAvg}h${scoreNote}（記録${sleepValues.length}日）`)
+    if (scoreValues.length > 0 && scoreValues.length !== sleepValues.length) {
+      parts.push(`スコア平均${r0(scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length)}（${scoreValues.length}日）`)
+    }
+  } else if (scoreValues.length > 0) {
+    parts.push(`スコア平均${r0(scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length)}（${scoreValues.length}日）`)
   }
   if (stepsValues.length > 0) {
     const stepsAvg = r0(stepsValues.reduce((a, b) => a + b, 0) / stepsValues.length)

@@ -130,6 +130,14 @@ export const WEEKLY_SYSTEM_PROMPT = `あなたは自宅で自重トレーニン�
 - 睡眠が短い週（平均 6 時間未満）や歩数が極端に少ない週は、トレーニングの量より回復・活動量の確保を優先して助言する
 - 専門用語を避け、口語で親しみやすく。出力はすべて日本語`
 
+/** 睡眠時間とスコアはそれぞれ独立に記録されうるので、片方だけでも出す */
+function sleepStatsText(s: WeekStats): string {
+  const parts: string[] = []
+  if (s.sleepAvg !== null) parts.push(`週平均 ${s.sleepAvg}h`)
+  if (s.sleepScoreAvg !== null) parts.push(`スコア週平均 ${s.sleepScoreAvg}`)
+  return parts.length === 0 ? '記録なし' : parts.join('・')
+}
+
 function statsLines(label: string, s: WeekStats): string[] {
   const intake = s.intake.days === 0 ? '食事の記録なし' : `平均 ${s.intake.kcal}kcal / P${s.intake.protein}g / F${s.intake.fat}g / C${s.intake.carbs}g（記録 ${s.intake.days}日）`
   return [
@@ -137,7 +145,7 @@ function statsLines(label: string, s: WeekStats): string[] {
     `トレーニング: ${s.workoutDays}日 / ${s.totalSets}セット / ${s.totalReps}回 + ${s.totalSeconds}秒 / 推定消費 約${s.burnKcal}kcal`,
     `食事: ${intake}`,
     `体重: ${s.weightAvg === null ? '記録なし' : `週平均 ${s.weightAvg}kg`}`,
-    `睡眠: ${s.sleepAvg === null ? '記録なし' : `週平均 ${s.sleepAvg}h`} / 歩数: ${s.stepsAvg === null ? '記録なし' : `週平均 ${s.stepsAvg}歩`}`,
+    `睡眠: ${sleepStatsText(s)} / 歩数: ${s.stepsAvg === null ? '記録なし' : `週平均 ${s.stepsAvg}歩`}`,
   ]
 }
 

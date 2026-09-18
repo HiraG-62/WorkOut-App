@@ -64,6 +64,14 @@ export function LogPage() {
   const sleepMovingAvg = useMemo(() => movingAverage(sleepPoints.map((p) => p.y), MOVING_AVG_DAYS), [sleepPoints])
   const sleepAvg = useMemo(() => periodAverage(sleepPoints), [sleepPoints])
 
+  const sleepScorePoints = useMemo<LinePoint[]>(() => {
+    const map = new Map((metrics ?? []).map((m) => [m.date, m.sleepScore ?? null]))
+    return lastNDays(range, today).map((d) => ({ x: d, y: map.get(d) ?? null }))
+  }, [metrics, range, today])
+  const sleepScoreMovingAvg = useMemo(() => movingAverage(sleepScorePoints.map((p) => p.y), MOVING_AVG_DAYS), [sleepScorePoints])
+  const sleepScoreAvg = useMemo(() => periodAverage(sleepScorePoints), [sleepScorePoints])
+  const hasSleepScore = sleepScorePoints.some((p) => p.y !== null)
+
   const stepsPoints = useMemo<LinePoint[]>(() => {
     const map = new Map((metrics ?? []).map((m) => [m.date, m.steps ?? null]))
     return lastNDays(range, today).map((d) => ({ x: d, y: map.get(d) ?? null }))
@@ -154,6 +162,24 @@ export function LogPage() {
             zeroBased
             integerTicks
           />
+          {hasSleepScore && (
+            <>
+              <p className="lg__avg">
+                スコア{sleepScoreAvg !== null && <> · 期間平均 <span className="num">{Math.round(sleepScoreAvg)}</span></>}
+              </p>
+              <LineChart
+                points={sleepScorePoints}
+                secondary={sleepScoreMovingAvg}
+                unit=""
+                color="var(--sleep)"
+                ariaLabel={`直近${range}日の睡眠スコア`}
+                xLabel={xLabelEvery(range === 30 ? 7 : 21, sleepScorePoints.length)}
+                zeroBased
+                integerTicks
+                height={120}
+              />
+            </>
+          )}
         </Card>
       </Section>
 

@@ -160,6 +160,8 @@ export interface DailyMetric {
   sleepHours?: number
   /** 歩数 */
   steps?: number
+  /** 睡眠スコア（0〜100。スマートウォッチや睡眠アプリの値をそのまま入れる） */
+  sleepScore?: number
   createdAt: number
   updatedAt: number
 }

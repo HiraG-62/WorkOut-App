@@ -374,7 +374,7 @@ export async function getLatestWeight(): Promise<WeightEntry | undefined> {
 
 // ---------- Daily metrics（睡眠・歩数） ----------
 
-export type DailyMetricField = 'sleepHours' | 'steps'
+export type DailyMetricField = 'sleepHours' | 'steps' | 'sleepScore'
 
 /** 指定日の睡眠/歩数を 1 項目だけ更新する（行がなければ作る） */
 export async function upsertDailyMetric(field: DailyMetricField, value: number, date = todayKey()): Promise<void> {

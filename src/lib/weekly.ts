@@ -44,6 +44,8 @@ export interface WeekStats {
   sleepAvg: number | null
   /** 週平均歩数（記録があれば、整数） */
   stepsAvg: number | null
+  /** 週平均睡眠スコア（記録があれば、整数） */
+  sleepScoreAvg: number | null
   /** 集計対象の日数（週の初日から今日まで）。AI に「何日分の集計か」を伝える */
   elapsedDays: number
 }
@@ -78,6 +80,7 @@ export function summarizeWeek({ weekStart, today, workouts, sets, meals, weights
   const weekMetrics = metrics.filter((m) => inWeek.has(m.date))
   const sleepAvg = avg(weekMetrics.map((m) => m.sleepHours).filter((v): v is number => v !== undefined))
   const stepsAvg = avg(weekMetrics.map((m) => m.steps).filter((v): v is number => v !== undefined))
+  const sleepScoreAvg = avg(weekMetrics.map((m) => m.sleepScore).filter((v): v is number => v !== undefined))
   // 進行中（endedAt なし）は now を開始時刻にして「セット数 × 最低時間」の下限で見積もる（レンダー時刻に依存させない）
   const burnKcal = weekWorkouts.reduce(
     (acc, w) =>
@@ -109,6 +112,7 @@ export function summarizeWeek({ weekStart, today, workouts, sets, meals, weights
     weightAvg: weightAvg === null ? null : Math.round(weightAvg * 10) / 10,
     sleepAvg: sleepAvg === null ? null : Math.round(sleepAvg * 10) / 10,
     stepsAvg: stepsAvg === null ? null : Math.round(stepsAvg),
+    sleepScoreAvg: sleepScoreAvg === null ? null : Math.round(sleepScoreAvg),
     elapsedDays: inWeek.size,
   }
 }

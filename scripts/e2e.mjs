@@ -136,6 +136,19 @@ try {
   assert(dqStatuses.length === 2 && dqStatuses.every((s) => s.includes('保存') || s.includes('今日')), `睡眠・歩数が自動保存される (${dqStatuses.join(' / ')})`)
   await shot('home-daily-saved')
 
+  // 2c. 睡眠の詳細シートでスコアを記録
+  await clickLabel('睡眠の詳細を入力')
+  await sleep(400)
+  await shot('sleep-detail')
+  await clickLabel('睡眠スコアを1増やす')
+  await sleep(900)
+  const scoreStatus = await page.$$eval('.sd__status', (els) => els.map((e) => e.textContent?.trim() ?? ''))
+  assert(scoreStatus.some((s) => s.includes('保存') || s.includes('今日')), `睡眠スコアが自動保存される (${scoreStatus.join(' / ')})`)
+  await page.keyboard.press('Escape')
+  await sleep(400)
+  const sleepStatus = await page.$eval('.dq__status', (e) => e.textContent?.trim() ?? '')
+  assert(sleepStatus.includes('スコア'), `睡眠ブロックにスコアが出る (${sleepStatus})`)
+
   // 3. ワークアウト開始（種目を選ぶ）
   await clickText('トレ', { tag: 'a' })
   await sleep(400)
@@ -298,6 +311,7 @@ try {
   await shot('log')
   const chartLabels = await page.$$eval('svg[role="img"]', (els) => els.map((e) => e.getAttribute('aria-label') ?? ''))
   assert(chartLabels.some((l) => l.includes('睡眠')) && chartLabels.some((l) => l.includes('歩数')), '記録ページに睡眠・歩数のグラフが出る')
+  assert(chartLabels.some((l) => l.includes('睡眠スコア')), '記録ページに睡眠スコアのグラフが出る')
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await sleep(300)
   await shot('log-bottom')

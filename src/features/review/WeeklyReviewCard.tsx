@@ -75,10 +75,11 @@ export function WeeklyReviewCard({ today, workouts, sets, meals, weights, metric
   const current = useMemo<WeekStats>(() => summarizeWeek({ ...base, weekStart }), [base, weekStart])
   const previous = useMemo<WeekStats | null>(() => {
     const p = summarizeWeek({ ...base, weekStart: prevStart })
-    return p.workoutDays === 0 && p.intake.days === 0 && p.weightAvg === null && p.sleepAvg === null && p.stepsAvg === null ? null : p
+    return p.workoutDays === 0 && p.intake.days === 0 && p.weightAvg === null && p.sleepAvg === null && p.sleepScoreAvg === null && p.stepsAvg === null ? null : p
   }, [base, prevStart])
 
-  const hasAny = current.workoutDays > 0 || current.intake.days > 0 || current.weightAvg !== null || current.sleepAvg !== null || current.stepsAvg !== null
+  const hasAny =
+    current.workoutDays > 0 || current.intake.days > 0 || current.weightAvg !== null || current.sleepAvg !== null || current.sleepScoreAvg !== null || current.stepsAvg !== null
   const aiReady = isAiConfigured(settings.ai)
   const providerLabel = AI_PROVIDERS[settings.ai.provider].label
   const kcalRate = achievementRate(current.intake.kcal, settings.targets.kcal)
@@ -242,17 +243,33 @@ export function WeeklyReviewCard({ today, workouts, sets, meals, weights, metric
           <div className="wr__stat">
             <dt>睡眠</dt>
             <dd>
-              {current.sleepAvg === null ? (
+              {current.sleepAvg === null && current.sleepScoreAvg === null ? (
                 <span className="wr__sub">記録なし</span>
               ) : (
                 <>
-                  <span className="wr__value">
-                    <span className="display wr__big">{current.sleepAvg}</span>h
-                  </span>
-                  <span className="wr__sub">
-                    週平均
-                    {sleepDelta !== null && <span className="wr__delta"> {signed(sleepDelta, 'h')}</span>}
-                  </span>
+                  {current.sleepAvg !== null && (
+                    <>
+                      <span className="wr__value">
+                        <span className="display wr__big">{current.sleepAvg}</span>h
+                      </span>
+                      <span className="wr__sub">
+                        週平均
+                        {sleepDelta !== null && <span className="wr__delta"> {signed(sleepDelta, 'h')}</span>}
+                      </span>
+                    </>
+                  )}
+                  {/* スコアだけ記録した週は時間の代わりにスコアを大きく出す */}
+                  {current.sleepScoreAvg !== null &&
+                    (current.sleepAvg === null ? (
+                      <>
+                        <span className="wr__value">
+                          <span className="display wr__big">{current.sleepScoreAvg}</span>
+                        </span>
+                        <span className="wr__sub">週平均スコア</span>
+                      </>
+                    ) : (
+                      <span className="wr__sub">スコア {current.sleepScoreAvg}</span>
+                    ))}
                 </>
               )}
             </dd>

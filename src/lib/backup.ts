@@ -96,9 +96,18 @@ function isRecordArray(v: unknown): v is Record<string, unknown>[] {
   return Array.isArray(v) && v.every((x) => typeof x === 'object' && x !== null && typeof (x as { id?: unknown }).id === 'string')
 }
 
+function parseJsonOrNull(json: string): unknown {
+  try {
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
+}
+
 function parseBackup(json: string): Backup {
-  const parsed: unknown = JSON.parse(json)
-  if (typeof parsed !== 'object' || parsed === null) throw new Error('不正なファイルです')
+  // JSON として読めないファイル（別形式・途中で切れた等）も日本語で伝える
+  const parsed = parseJsonOrNull(json)
+  if (typeof parsed !== 'object' || parsed === null) throw new Error('バックアップファイルとして読み込めません')
   const b = parsed as Record<string, unknown>
   if (b.version !== BACKUP_VERSION) throw new Error('対応していないバックアップ形式です')
   const tables = ['exercises', 'workouts', 'sets', 'foods', 'meals', 'mealSets', 'weights'] as const

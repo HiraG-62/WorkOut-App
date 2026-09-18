@@ -39,13 +39,15 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # dist/ に PWA 込みで出力
 npm run lint
-npm run e2e        # 開発サーバー(5199)に対してスマホ相当の自動操作とスクリーンショット
+npm run e2e        # 開発サーバー(5199)に対してスマホ相当の自動操作とスクリーンショット（バックアップの書き出し→復元まで通す）
 npm run pwa:check  # vite preview(4173) に対して Service Worker / マニフェストの登録確認
 npm run update:check  # 新バージョン検知 → 更新バナー → 再読み込みの流れを確認（preview 起動中に実行）
-npm run migration:check  # v1 の IndexedDB を用意して v2 マイグレーション（種目の order 付与）を確認
+npm run migration:check  # データ入りの v1 IndexedDB を用意して現行スキーマまで上がること（テーブル・インデックス・変換・既存データ）を確認
 ```
 
 `npm run e2e` などのスクリプトは `puppeteer-core` でローカルの Chrome を使います。パスが違う場合は `CHROME_PATH` で指定してください。E2E は `npm run dev:e2e` で 5199 番ポートの開発サーバーを立ててから実行します。
+
+開発サーバー中だけ `#/dev/figures` でフォーム図の一覧を確認できます（本番ビルドには含まれません）。
 
 ## 技術
 
@@ -55,13 +57,13 @@ AI 連携はブラウザから各社 API を直接呼びます（Claude は `@an
 
 ## バージョン管理
 
-`package.json` の `version` が唯一の正。`major.minor.patch` で、当面は 0.x のベータ。設定画面の最下部に `v0.8.0 β` のように出る。
+`package.json` の `version` が唯一の正。`major.minor.patch` で、0.x の間はベータ扱い（設定画面の最下部のバージョン表示に β が付き、GitHub Release も prerelease になる）。1.0.0 以降は β 表示が外れ、正式リリースとして扱う。
 
 | 上げる桁 | いつ | コマンド |
 | --- | --- | --- |
 | patch | 小規模な機能追加・不具合修正・文言や UI の調整 | `npm run release:patch` |
 | minor | ある程度の規模の機能追加（新しい画面・記録項目・AI 機能など） | `npm run release:minor` |
-| major | リニューアルなど大規模な作り直し（明示的に決めたときだけ） | `npm run release:major` |
+| major | 0.x → 1.0.0 の正式リリース、またはリニューアルなど大規模な作り直し（明示的に決めたときだけ） | `npm run release:major` |
 
 コマンドは version を書き換えたコミットと `vX.Y.Z` タグを作る（作業ツリーがクリーンな状態で実行）。その後 `git push --follow-tags` すると、main のデプロイに加えてタグから GitHub Release が自動生成される（`.github/workflows/release.yml`）。
 

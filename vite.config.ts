@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-/** アプリのバージョン（package.json の version が唯一の正。0.x はベータ） */
+/** アプリのバージョン（package.json の version が唯一の正。0.x の間は設定画面に β が付く） */
 function appVersion(): string {
   const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }
   return pkg.version
